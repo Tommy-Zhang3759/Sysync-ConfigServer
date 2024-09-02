@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Interface</title>
+</head>
+<body style="background-color: #000000">
+<header>
+    <h1>Interactive Interface</h1>
+    <div id="headRight">
+        <button id="executeButton" onclick="submitCodeFile()">Execute</button>
+    </div>
+
+</header>
+<main>
+    <script>
+        async function submitCodeFile(){
+            const res = await fetch(`/api/func`, {
+                method: 'POST',
+                credentials: 'include', // automatically insert cookies
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json' // 确保服务器知道你发送的是 JSON
+                },
+                body: JSON.stringify({ // 将对象转换为紧凑的 JSON 字符串
+                    "f_name": "updateHostName",
+                    "dest": ["127.0.0.1"],
+                    "port": 6004,
+                    "host_ip": "192.168.60.21",
+                    "host_port": "6001"
+                }) // 没有传入第三个参数，这样 JSON 就是紧凑格式
+            });
+
+            if (!res.ok) { //slow connection
+                throw new Error('Network response was not ok ' + res.statusText);
+            }
+
+            const reqData = await res.json(); // 将响应解析为JSON
+
+            console.log("taskOBJ Init:" + JSON.stringify(reqData));
+        }
+    </script>
+</main>
+
+</body>
+</html>

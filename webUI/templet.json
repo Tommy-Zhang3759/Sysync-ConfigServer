@@ -1,0 +1,7 @@
+{
+  "f_name": "updateHostName",
+  "dest": ["255.255.255.255"],
+  "port": 6004,
+  "host_ip": "192.168.60.9",
+  "host_port": "6001"
+}
