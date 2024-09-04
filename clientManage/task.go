@@ -12,10 +12,11 @@ type Task interface {
 
 type Schedule struct {
 	execTime time.Time
+	do       func() error
 }
 
 func (s *Schedule) Run() error {
-	return nil
+	return s.do()
 }
 func (s *Schedule) Stop() error {
 	return nil

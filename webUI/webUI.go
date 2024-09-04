@@ -77,29 +77,44 @@ func handleAPI(w http.ResponseWriter, r *http.Request, q url.Values) {
 
 func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 	bodyJson, _ := utils.JsonDecode(*body)
-	if dest, ok := bodyJson["dest"].([]interface{}); ok {
+
+	switch bodyJson["f_name"] {
+	case "updateHostName":
+		t := clientManage.NewUDPCallMess()
+
 		var destStrings []string
-		for _, v := range dest {
-			if str, ok := v.(string); ok {
-				destStrings = append(destStrings, str)
+		if dest, ok := bodyJson["dest_ip"].([]interface{}); ok {
+			for _, v := range dest {
+				if str, ok := v.(string); ok {
+					destStrings = append(destStrings, str)
+				}
 			}
 		}
-		switch bodyJson["f_name"] {
-		case "updateHostName":
-			t := clientManage.NewUDPCallMess()
-			clientManage.UpdateHostName(t, destStrings, bodyJson["host_ip"].(string), bodyJson["host_port"].(string))
-
-			go func() {
-				err := t.Run()
-				if err != nil {
-					println(err.Error())
-				}
-			}()
-			// add t into task list and return an tID
+		for _, v := range destStrings {
+			t.TargetIP.PushBack(v)
 		}
-	} else {
-		return
+
+		t.Port = bodyJson["dest_port"].(string)
+
+		t.Body["f_name"] = "updateHostName"
+		t.Body["host_ip"] = bodyJson["host_ip"].(string)
+		t.Body["host_port"] = clientManage.UdpHostPort
+
+		t2 := clientManage.HostNameRequester()
+
+		err := t.Run()
+		if err != nil {
+			println(err.Error())
+		}
+		err = t2.Run()
+		if err != nil {
+			println(err.Error())
+		}
+		clientManage.CliUdpApiGateway.Init()
+		clientManage.CliUdpApiGateway.Run()
+		// add t into task list and return an tID
 	}
+
 }
 
 func command(w http.ResponseWriter, r *http.Request, body *[]byte) {

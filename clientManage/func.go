@@ -1,6 +1,7 @@
 package clientManage
 
 import (
+	"ConfigServer/APIGateway"
 	"container/list"
 	"encoding/json"
 	"fmt"
@@ -9,7 +10,12 @@ import (
 	"net"
 	"os"
 	"sync"
+	"time"
 )
+
+var UdpHostPort = 6004
+
+var CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort) // definition of tcp port
 
 type Call interface {
 	Run() error
@@ -34,12 +40,10 @@ type UDPCallMessage struct {
 	TargetIP *list.List
 	Body     map[string]interface{}
 	Port     string
-	Server   func()
 	stop     bool
 }
 
 func (c *UDPCallMessage) Run() error {
-	c.Server() // need to wait until server start successfully in FUTURE
 
 	var wg sync.WaitGroup
 
@@ -80,7 +84,7 @@ func (c *UDPCallMessage) Run() error {
 					fmt.Println("Error sending UDP message:", err)
 					return err
 				}
-				fmt.Println("Message sent to", ip)
+				fmt.Println("Message sent to", serverAddr.String())
 				fmt.Println("Body:", string(c.bodyJson()))
 				return nil
 			}(targetIP)
@@ -117,121 +121,94 @@ func sendCommand(cmd string) {
 
 }
 
-func UpdateHostName(t *UDPCallMessage, destStrings []string, hostIP string, hostPort string) {
-	for i := range destStrings {
-		t.TargetIP.PushBack((destStrings)[i])
-	}
+func HostNameRequester() Schedule {
+	var api = APIGateway.UDPAPIPort{
+		KeyWord: "updateHostName",
+		Do: func(req map[string]interface{}, addr net.UDPAddr) error {
 
-	t.Body["f_name"] = "updateHostName"
-	t.Body["host_ip"] = hostIP
-	t.Body["host_port"] = hostPort
-	t.Port = hostPort // use the same port as the sending service to save port usage
-
-	t.Server = func() {
-		serverAddr := t.Body["host_ip"].(string) + ":" + t.Body["host_port"].(string)
-		listener, err := net.Listen("tcp", serverAddr)
-
-		if err != nil {
-			fmt.Println("Error creating server socket:", err)
-			return
-		}
-
-		fmt.Printf("Host name update service listening on %s\n", serverAddr)
-
-		type ClientRequest struct {
-			Mac string `json:"mac"`
-		}
-
-		//------------------------------tmp use----------------------------------------
-
-		type HostInfo struct {
-			IP       string `json:"ip"`
-			HostName string `json:"host_name"`
-		}
-
-		macMap := func() map[string]HostInfo {
-			jsonFile, err := os.Open("resources/mac_ip_host_name.json")
-			if err != nil {
-				log.Fatalf("Can not open file: %v", err)
-			}
-			defer func(jsonFile *os.File) {
-				_ = jsonFile.Close()
-			}(jsonFile)
-
-			// 读取文件内容
-			byteValue, err := ioutil.ReadAll(jsonFile)
-			if err != nil {
-				log.Fatalf("无法读取文件内容: %v", err)
+			type ClientRequest struct {
+				Mac string `json:"mac"`
 			}
 
-			// 定义一个map来存储JSON数据
-			macMap := make(map[string]HostInfo)
-
-			// 解析JSON到map中
-			if err := json.Unmarshal(byteValue, &macMap); err != nil {
-				log.Fatalf("JSON解析失败: %v", err)
+			type HostInfo struct {
+				IP       string `json:"ip"`
+				HostName string `json:"host_name"`
 			}
-			return macMap
-		}()
 
-		//------------------------------tmp use----------------------------------------
-		go func() {
-			for !t.stop {
-				// 接收客户端连接
-				clientConn, err := listener.Accept()
+			macMap := func() map[string]HostInfo {
+				jsonFile, err := os.Open("resources/mac_ip_host_name.json")
 				if err != nil {
-					fmt.Println("Error accepting connection:", err)
-					continue
+					log.Fatalf("Can not open file: %v", err)
+				}
+				defer func(jsonFile *os.File) {
+					_ = jsonFile.Close()
+				}(jsonFile)
+
+				// 读取文件内容
+				byteValue, err := ioutil.ReadAll(jsonFile)
+				if err != nil {
+					log.Fatalf("无法读取文件内容: %v", err)
 				}
 
-				// 处理客户端请求
-				go func(conn net.Conn, macMap *map[string]HostInfo) {
-					defer func(conn net.Conn) {
-						_ = conn.Close()
-					}(conn)
+				// 定义一个map来存储JSON数据
+				macMap := make(map[string]HostInfo)
 
-					// 接收客户端的请求消息
-					buffer := make([]byte, 1024)
-					n, err := conn.Read(buffer)
-					if err != nil {
-						fmt.Println("Error reading from connection:", err)
-						return
-					}
+				// 解析JSON到map中
+				if err := json.Unmarshal(byteValue, &macMap); err != nil {
+					log.Fatalf("JSON解析失败: %v", err)
+				}
+				return macMap
+			}()
 
-					// 将请求消息解析为字典
-					var req ClientRequest
-					err = json.Unmarshal(buffer[:n], &req)
-					if err != nil {
-						fmt.Println("Error unmarshalling JSON:", err)
-						return
-					}
+			cliInfo := (macMap)[req["mac"].(string)]
 
-					fmt.Printf("Received from client: %+v\n", req)
-
-					// 模拟从 DataFrame 获取客户端信息
-					cliInfo := (*macMap)[req.Mac]
-
-					// 将响应消息转换为 JSON
-					responseMessage, err := json.Marshal(cliInfo)
-					if err != nil {
-						fmt.Println("Error marshalling JSON:", err)
-						return
-					}
-
-					// 发送响应消息回客户端
-					_, err = conn.Write(responseMessage)
-					if err != nil {
-						fmt.Println("Error sending response:", err)
-						return
-					}
-
-				}(clientConn, &macMap)
+			rspMessage, err := json.Marshal(cliInfo)
+			if err != nil {
+				fmt.Println("Error marshalling JSON:", err)
+				return err
 			}
-			defer func(listener net.Listener) {
-				_ = listener.Close()
-			}(listener)
-		}()
+
+			sendAddr := net.UDPAddr{
+				Port: 0,
+				IP:   net.ParseIP("0.0.0.0"),
+			}
+			conn, err := net.ListenUDP("udp", &sendAddr)
+			if err != nil {
+				fmt.Println("Error:", err)
+				return err
+			}
+			defer func(conn *net.UDPConn) {
+				_ = conn.Close()
+			}(conn)
+
+			// 目标地址
+			targetAddr := net.UDPAddr{
+				IP:   net.ParseIP(addr.String()),
+				Port: addr.Port,
+			}
+
+			// 发送数据
+			_, err = conn.WriteTo(rspMessage, &targetAddr)
+			if err != nil {
+				fmt.Println("Error sending message:", err)
+				return err
+			}
+
+			return nil
+		},
 	}
+
+	return Schedule{
+		execTime: time.Time{},
+		do: func() error {
+			err := CliUdpApiGateway.Add(&api)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+
 }
 
 func getInput() {

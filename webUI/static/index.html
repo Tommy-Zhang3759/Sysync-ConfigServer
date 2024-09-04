@@ -25,10 +25,10 @@
                 },
                 body: JSON.stringify({ // 将对象转换为紧凑的 JSON 字符串
                     "f_name": "updateHostName",
-                    "dest": ["127.0.0.1"],
-                    "port": 6004,
-                    "host_ip": "192.168.60.21",
-                    "host_port": "6001"
+                    "dest_ip": ["127.0.0.1"],
+                    "dest_port": "6004",
+                    "host_ip": "127.0.0.1",
+                    "host_port": "6004"
                 }) // 没有传入第三个参数，这样 JSON 就是紧凑格式
             });
 
