@@ -14,6 +14,7 @@ import (
 )
 
 var UdpHostPort = 6004
+var UdpClientPort = 6003
 
 var CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort) // definition of tcp port
 
@@ -123,7 +124,7 @@ func sendCommand(cmd string) {
 
 func HostNameRequester() Schedule {
 	var api = APIGateway.UDPAPIPort{
-		KeyWord: "updateHostName",
+		KeyWord: "hostNameReq",
 		Do: func(req map[string]interface{}, addr net.UDPAddr) error {
 
 			type ClientRequest struct {
@@ -160,9 +161,20 @@ func HostNameRequester() Schedule {
 				return macMap
 			}()
 
-			cliInfo := (macMap)[req["mac"].(string)]
+			cliInfo := macMap[req["mac"].(string)]
+			type resTemp struct {
+				FName string `json:"f_name"`
+				Host  string `json:"host_name"`
+				IP    string `json:"host_ip"`
+			}
 
-			rspMessage, err := json.Marshal(cliInfo)
+			rsp := resTemp{
+				FName: "hostNameOffer",
+				Host:  cliInfo.HostName,
+				IP:    cliInfo.IP,
+			}
+
+			rspJson, err := json.Marshal(rsp)
 			if err != nil {
 				fmt.Println("Error marshalling JSON:", err)
 				return err
@@ -183,12 +195,12 @@ func HostNameRequester() Schedule {
 
 			// 目标地址
 			targetAddr := net.UDPAddr{
-				IP:   net.ParseIP(addr.String()),
-				Port: addr.Port,
+				IP:   addr.IP,
+				Port: UdpClientPort,
 			}
 
 			// 发送数据
-			_, err = conn.WriteTo(rspMessage, &targetAddr)
+			_, err = conn.WriteTo(rspJson, &targetAddr)
 			if err != nil {
 				fmt.Println("Error sending message:", err)
 				return err

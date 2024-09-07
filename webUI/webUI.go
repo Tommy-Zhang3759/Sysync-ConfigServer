@@ -79,7 +79,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 	bodyJson, _ := utils.JsonDecode(*body)
 
 	switch bodyJson["f_name"] {
-	case "updateHostName":
+	case "update_host_name":
 		t := clientManage.NewUDPCallMess()
 
 		var destStrings []string
@@ -94,7 +94,11 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			t.TargetIP.PushBack(v)
 		}
 
-		t.Port = bodyJson["dest_port"].(string)
+		if bodyJson["dest_port"].(string) != "" {
+			t.Port = bodyJson["dest_port"].(string)
+		} else {
+			t.Port = (string)(rune(clientManage.UdpClientPort))
+		}
 
 		t.Body["f_name"] = "updateHostName"
 		t.Body["host_ip"] = bodyJson["host_ip"].(string)
