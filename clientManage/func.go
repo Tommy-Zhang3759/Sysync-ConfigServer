@@ -118,9 +118,11 @@ func NewUDPCallMess() *UDPCallMessage {
 	}
 }
 
-func sendCommand(cmd string) {
-
+func SendCommand2Host(cmd string) {
+	
 }
+
+
 
 func HostNameRequester() Schedule {
 	var api = APIGateway.UDPAPIPort{

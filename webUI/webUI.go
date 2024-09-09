@@ -114,11 +114,40 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		if err != nil {
 			println(err.Error())
 		}
-		clientManage.CliUdpApiGateway.Init()
-		clientManage.CliUdpApiGateway.Run()
+	case "send_command_to_host":
+		t := clientManage.NewUDPCallMess()
+
+		var destStrings []string
+		if dest, ok := bodyJson["dest_ip"].([]interface{}); ok {
+			for _, v := range dest {
+				if str, ok := v.(string); ok {
+					destStrings = append(destStrings, str)
+				}
+			}
+		}
+		for _, v := range destStrings {
+			t.TargetIP.PushBack(v)
+		}
+
+		if bodyJson["dest_port"].(string) != "" {
+			t.Port = bodyJson["dest_port"].(string)
+		} else {
+			t.Port = (string)(rune(clientManage.UdpClientPort))
+		}
+
+		t.Body["f_name"] = "run_command"
+		// t.Body["host_ip"] = bodyJson["host_ip"].(string)
+		// t.Body["host_port"] = clientManage.UdpHostPort
+		t.Body["command"] = bodyJson["command"]
+
+		err := t.Run()
+		if err != nil {
+			println(err.Error())
+		}
 		// add t into task list and return an tID
 	}
-
+	clientManage.CliUdpApiGateway.Init()
+	clientManage.CliUdpApiGateway.Run()
 }
 
 func command(w http.ResponseWriter, r *http.Request, body *[]byte) {

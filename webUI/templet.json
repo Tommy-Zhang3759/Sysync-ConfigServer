@@ -1,7 +1,17 @@
+[
 {
   "f_name": "update_host_name",
   "dest": ["255.255.255.255"],
   "port": "6004",
   "host_ip": "192.168.60.9",
   "host_port": "6004"
+},
+
+{
+  "f_name": "send_command_to_host",
+  "dest": ["255.255.255.255"],
+  "command": "shutdown -s -t 0"
 }
+
+
+]
