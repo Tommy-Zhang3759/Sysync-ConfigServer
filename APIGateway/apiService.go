@@ -2,14 +2,6 @@
 
 package APIGateway
 
-func NewTCPAPIGateway(port int) *TCPAPIGateway {
-	return &TCPAPIGateway{
-		portList: make(map[string]*TCPAPIPort),
-		Port:     port,
-		statCode: 000,
-	}
-}
-
 func NewUDPAPIGateway(port int) *UDPAPIGateway {
 	return &UDPAPIGateway{
 		portList: make(map[string]*UDPAPIPort),

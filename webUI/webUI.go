@@ -100,7 +100,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			t.Port = (string)(rune(clientManage.UdpClientPort))
 		}
 
-		t.Body["f_name"] = "updateHostName"
+		t.Body["f_name"] = "update_host_name"
 		t.Body["host_ip"] = bodyJson["host_ip"].(string)
 		t.Body["host_port"] = clientManage.UdpHostPort
 
