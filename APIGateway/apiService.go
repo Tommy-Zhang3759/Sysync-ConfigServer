@@ -4,7 +4,7 @@ package APIGateway
 
 func NewUDPAPIGateway(port int) *UDPAPIGateway {
 	return &UDPAPIGateway{
-		portList: make(map[string]*UDPAPIPort),
+		portList: make(map[string]UDPAPIPort),
 		Port:     port,
 		statCode: 000,
 	}

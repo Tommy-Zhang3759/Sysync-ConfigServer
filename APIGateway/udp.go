@@ -11,19 +11,39 @@ type reqMessage struct {
 	Text   map[string]interface{}
 }
 
-type UDPAPIPort struct {
-	KeyWord    string
+type UDPAPIPortTemp struct {
+	keyWord    string
 	messageQue utils.Queue
 	Gateway    *UDPAPIGateway
 
 	endRun chan bool
 }
 
-func (u *UDPAPIPort) newMess(mess reqMessage) {
+func (u *UDPAPIPortTemp) KeyWord() string {
+	return u.keyWord
+}
+
+func (u *UDPAPIPortTemp) Start() error {
+	go func() {
+		_ = u.run()
+	}()
+	return nil
+}
+
+func (u *UDPAPIPortTemp) Stop() error {
+	u.endRun <- true
+	return nil
+}
+
+func (u *UDPAPIPortTemp) NewMess(mess reqMessage) {
 	u.messageQue.Append(mess)
 }
 
-func (u *UDPAPIPort) run() error { // a template to write APIs' definition
+func (u *UDPAPIPortTemp) Init(gateway *UDPAPIGateway) {
+	u.Gateway = gateway
+}
+
+func (u *UDPAPIPortTemp) run() error { // a template to write APIs' definition
 	stop := false
 
 	for stop == false {
@@ -45,7 +65,7 @@ func (u *UDPAPIPort) run() error { // a template to write APIs' definition
 }
 
 type UDPAPIGateway struct { // listen api calls on a specific port
-	portList map[string]*UDPAPIPort
+	portList map[string]UDPAPIPort // pointer point to a real port structure
 	Port     int
 	statCode int
 
@@ -116,7 +136,7 @@ func (a *UDPAPIGateway) Run() error {
 					fmt.Println("Error decoding form UDP API message:", jsonErr.Error())
 				}
 
-				a.portList[messJson["f_name"].(string)].newMess(reqMessage{
+				a.portList[messJson["f_name"].(string)].NewMess(reqMessage{
 					Source: addr,
 					Text:   messJson,
 				})
@@ -136,24 +156,26 @@ func (a *UDPAPIGateway) Stop() error {
 	return nil
 }
 
-func (a *UDPAPIGateway) Add(port *UDPAPIPort) error {
-	if a.portList == nil {
-		a.portList = make(map[string]*UDPAPIPort)
-	}
+type UDPAPIPort interface {
+	run() error
+	Start() error
+	Stop() error
+	NewMess(mess reqMessage)
+	KeyWord() string
+	Init(gateway *UDPAPIGateway)
+}
 
-	if _, ok := a.portList[port.KeyWord]; ok {
-		return fmt.Errorf("port %s already exists", port.KeyWord)
+func (a *UDPAPIGateway) Add(port UDPAPIPort) error {
+	if _, ok := a.portList[port.KeyWord()]; ok {
+		return fmt.Errorf("port %s already exists", port.KeyWord())
 	} else {
-		port.Gateway = a
-		a.portList[port.KeyWord] = port
+		port.Init(a)
+		a.portList[port.KeyWord()] = port
 		return nil
 	}
 }
 
 func (a *UDPAPIGateway) Remove(keyWord string) error {
-	if a.portList == nil {
-		a.portList = make(map[string]*UDPAPIPort)
-	}
 	if _, ok := a.portList[keyWord]; ok {
 		delete(a.portList, keyWord)
 	} else {
