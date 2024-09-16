@@ -139,36 +139,24 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		//}
 
 	case "send_command_to_host":
-		//t := clientManage.NewUDPCallMess()
+
+		sender := APIGateway.MessSending{
+			Dest: addrs,
+			MessContent: map[string]interface{}{
+				"f_name":  "run_command",
+				"command": bodyJson["command"].(string),
+			},
+		}
+
+		//commandServer := APIGateway.CommandReq{}
+		//commandServer.SetKeyWord("command_req")
 		//
-		//var destStrings []string
-		//if dest, ok := bodyJson["dest_ip"].([]interface{}); ok {
-		//	for _, v := range dest {
-		//		if str, ok := v.(string); ok {
-		//			destStrings = append(destStrings, str)
-		//		}
-		//	}
-		//}
-		//for _, v := range destStrings {
-		//	t.TargetIP.PushBack(v)
-		//}
+		_ = sender.Run()
 		//
-		//if bodyJson["dest_port"].(string) != "" {
-		//	t.Port = bodyJson["dest_port"].(string)
-		//} else {
-		//	t.Port = (string)(rune(clientManage.UdpClientPort))
+		//addErr := clientManage.CliUdpApiGateway.Add(&commandServer)
+		//if addErr == nil {
+		//	_ = commandServer.Run()
 		//}
-		//
-		//t.Body["f_name"] = "run_command"
-		//// t.Body["host_ip"] = bodyJson["host_ip"].(string)
-		//// t.Body["host_port"] = clientManage.UdpHostPort
-		//t.Body["command"] = bodyJson["command"]
-		//
-		//err := t.Run()
-		//if err != nil {
-		//	println(err.Error())
-		//}
-		// add t into task list and return an tID
 	}
 
 }
