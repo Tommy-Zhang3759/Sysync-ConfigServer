@@ -113,6 +113,9 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			},
 		}
 
+		nameServer := APIGateway.HostNameReq{}
+		nameServer.SetKeyWord("host_name_req")
+
 		//t := clientManage.Schedule{
 		//	ExecTime: time.Time{},
 		//	Do: func() error {
@@ -120,8 +123,12 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		//		return err
 		//	},
 		//}
-		_ = clientManage.CliUdpApiGateway.Add(&sender)
 		_ = sender.Run()
+
+		addErr := clientManage.CliUdpApiGateway.Add(&nameServer)
+		if addErr == nil {
+			_ = nameServer.Run()
+		}
 
 		//t2 := clientManage.Schedule{
 		//	ExecTime: time.Time{},
@@ -197,8 +204,13 @@ func StartServer(port string, handlerFunc http.HandlerFunc) {
 		Handler: mux,
 	}
 
-	clientManage.CliUdpApiGateway.Init()
-	go clientManage.CliUdpApiGateway.Run()
+	err := clientManage.CliUdpApiGateway.Init()
+	if err != nil {
+		return
+	}
+	go func() {
+		_ = clientManage.CliUdpApiGateway.Run()
+	}()
 
 	fmt.Printf("Starting server at port %s...\n", port)
 	if err := server.ListenAndServe(); err != nil {

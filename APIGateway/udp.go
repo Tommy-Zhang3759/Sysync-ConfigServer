@@ -13,10 +13,15 @@ type UDPMessage struct {
 
 type UDPAPIPortTemp struct {
 	keyWord    string
-	messageQue utils.Queue
+	messageQue *utils.Queue
 	Gateway    *UDPAPIGateway
 
 	endRun chan bool
+}
+
+func (u *UDPAPIPortTemp) SetKeyWord(key string) {
+	u.keyWord = key
+	return
 }
 
 func (u *UDPAPIPortTemp) KeyWord() string {
@@ -41,6 +46,7 @@ func (u *UDPAPIPortTemp) NewMess(mess UDPMessage) {
 
 func (u *UDPAPIPortTemp) Init(gateway *UDPAPIGateway) {
 	u.Gateway = gateway
+	u.messageQue = utils.NewQueue()
 }
 
 func (u *UDPAPIPortTemp) Run() error { // a template to write APIs' definition
@@ -158,6 +164,7 @@ type UDPAPIPort interface {
 	NewMess(mess UDPMessage)
 	KeyWord() string
 	Init(gateway *UDPAPIGateway)
+	SetKeyWord(key string)
 }
 
 func (a *UDPAPIGateway) Add(port UDPAPIPort) error {
