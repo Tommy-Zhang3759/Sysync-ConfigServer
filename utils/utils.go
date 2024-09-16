@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"strconv"
 )
 
 func JsonDecode(jsonData []byte) (map[string]interface{}, error) {
@@ -74,4 +75,22 @@ func readUntilEndMarker(conn net.Conn) (string, error) { // read throw tcp conne
 	}
 
 	return message, nil
+}
+
+func ParseUDPAddr(ip string, port string) (net.UDPAddr, error) {
+	parsedIP := net.ParseIP(ip)
+	if parsedIP == nil {
+		return net.UDPAddr{}, fmt.Errorf("invalid IP address")
+	}
+
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return net.UDPAddr{}, fmt.Errorf("invalid IP port")
+	}
+
+	return net.UDPAddr{
+		IP:   parsedIP,
+		Port: p,
+	}, nil
 }

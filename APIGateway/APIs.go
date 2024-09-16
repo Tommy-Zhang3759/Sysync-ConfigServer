@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"os"
 )
 
@@ -12,11 +13,11 @@ type HostNameReq struct {
 	UDPAPIPortTemp
 }
 
-func (u *HostNameReq) run() error {
+func (u *HostNameReq) Run() error {
 	stop := false
 
 	for stop == false {
-		reqPack := u.messageQue.Pop().(reqMessage)
+		reqPack := u.messageQue.Pop().(UDPMessage)
 
 		select {
 		case <-u.endRun:
@@ -77,7 +78,7 @@ func (u *HostNameReq) run() error {
 				return err
 			}
 
-			err = u.Gateway.sendMess(reqPack.Source, rspJson)
+			err = u.Gateway.SendMess(rspJson, reqPack.Addr)
 			if err != nil {
 				fmt.Println("Error sending message:", err)
 				return err
@@ -90,4 +91,23 @@ func (u *HostNameReq) run() error {
 
 type sendCommandToHost struct {
 	UDPAPIPortTemp
+}
+
+type MessSending struct {
+	UDPAPIPortTemp
+	Dest        []net.UDPAddr
+	MessContent map[string]interface{}
+}
+
+func (m *MessSending) name() {
+
+}
+func (m *MessSending) Run() error {
+	err := m.Gateway.SendMess(m.bodyJson(), m.Dest...)
+	return err
+}
+
+func (m *MessSending) bodyJson() []byte {
+	mess, _ := json.Marshal(m.MessContent)
+	return mess
 }
