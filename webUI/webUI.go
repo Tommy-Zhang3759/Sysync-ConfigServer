@@ -1,15 +1,16 @@
 package webUI
 
 import (
+	"ConfigServer/APIGateway"
 	"ConfigServer/clientManage"
+	"ConfigServer/utils"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"strings"
-
-	"ConfigServer/utils"
 )
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -78,76 +79,86 @@ func handleAPI(w http.ResponseWriter, r *http.Request, q url.Values) {
 func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 	bodyJson, _ := utils.JsonDecode(*body)
 
+	var destStrings []string
+	if dest, ok := bodyJson["dest_ip"].([]interface{}); ok {
+		for _, v := range dest {
+			if str, ok := v.(string); ok {
+				destStrings = append(destStrings, str)
+			}
+		}
+	} else {
+		destStrings = append(destStrings, "0.0.0.0")
+	}
+
+	var addrs []net.UDPAddr
+	for _, ip := range destStrings {
+		addr, err := utils.ParseUDPAddr(ip, bodyJson["dest_port"].(string))
+		if err != nil {
+			fmt.Println("Error parsing address:", err)
+			continue
+		}
+		addrs = append(addrs, addr)
+	}
+
 	switch bodyJson["f_name"] {
 	case "update_host_name":
-		t := clientManage.NewUDPCallMess()
 
-		var destStrings []string
-		if dest, ok := bodyJson["dest_ip"].([]interface{}); ok {
-			for _, v := range dest {
-				if str, ok := v.(string); ok {
-					destStrings = append(destStrings, str)
-				}
-			}
-		}
-		for _, v := range destStrings {
-			t.TargetIP.PushBack(v)
+		sender := APIGateway.MessSending{
+			Dest: addrs,
+			MessContent: map[string]interface{}{
+				"f_name":    "update_host_name",
+				"host_ip":   bodyJson["host_ip"].(string),
+				"host_port": clientManage.UdpHostPort,
+				//"host_port": bodyJson["host_port"].(string),
+			},
 		}
 
-		if bodyJson["dest_port"].(string) != "" {
-			t.Port = bodyJson["dest_port"].(string)
-		} else {
-			t.Port = (string)(rune(clientManage.UdpClientPort))
+		nameServer := APIGateway.HostNameReq{}
+		nameServer.SetKeyWord("host_name_req")
+
+		//t := clientManage.Schedule{
+		//	ExecTime: time.Time{},
+		//	Do: func() error {
+		//		err := sender.Run()
+		//		return err
+		//	},
+		//}
+		_ = sender.Run()
+
+		addErr := clientManage.CliUdpApiGateway.Add(&nameServer)
+		if addErr == nil {
+			_ = nameServer.Run()
 		}
 
-		t.Body["f_name"] = "update_host_name"
-		t.Body["host_ip"] = bodyJson["host_ip"].(string)
-		t.Body["host_port"] = clientManage.UdpHostPort
+		//t2 := clientManage.Schedule{
+		//	ExecTime: time.Time{},
+		//	Do: func() error {
+		//		err := sender.Run()
+		//		return err
+		//	},
+		//}
 
-		t2 := clientManage.HostNameRequester()
-
-		err := t.Run()
-		if err != nil {
-			println(err.Error())
-		}
-		err = t2.Run()
-		if err != nil {
-			println(err.Error())
-		}
 	case "send_command_to_host":
-		t := clientManage.NewUDPCallMess()
 
-		var destStrings []string
-		if dest, ok := bodyJson["dest_ip"].([]interface{}); ok {
-			for _, v := range dest {
-				if str, ok := v.(string); ok {
-					destStrings = append(destStrings, str)
-				}
-			}
-		}
-		for _, v := range destStrings {
-			t.TargetIP.PushBack(v)
+		sender := APIGateway.MessSending{
+			Dest: addrs,
+			MessContent: map[string]interface{}{
+				"f_name":  "run_command",
+				"command": bodyJson["command"].(string),
+			},
 		}
 
-		if bodyJson["dest_port"].(string) != "" {
-			t.Port = bodyJson["dest_port"].(string)
-		} else {
-			t.Port = (string)(rune(clientManage.UdpClientPort))
-		}
-
-		t.Body["f_name"] = "run_command"
-		// t.Body["host_ip"] = bodyJson["host_ip"].(string)
-		// t.Body["host_port"] = clientManage.UdpHostPort
-		t.Body["command"] = bodyJson["command"]
-
-		err := t.Run()
-		if err != nil {
-			println(err.Error())
-		}
-		// add t into task list and return an tID
+		//commandServer := APIGateway.CommandReq{}
+		//commandServer.SetKeyWord("command_req")
+		//
+		_ = sender.Run()
+		//
+		//addErr := clientManage.CliUdpApiGateway.Add(&commandServer)
+		//if addErr == nil {
+		//	_ = commandServer.Run()
+		//}
 	}
-	clientManage.CliUdpApiGateway.Init()
-	clientManage.CliUdpApiGateway.Run()
+
 }
 
 func command(w http.ResponseWriter, r *http.Request, body *[]byte) {
@@ -180,6 +191,14 @@ func StartServer(port string, handlerFunc http.HandlerFunc) {
 		Addr:    ":" + port,
 		Handler: mux,
 	}
+
+	err := clientManage.CliUdpApiGateway.Init()
+	if err != nil {
+		return
+	}
+	go func() {
+		_ = clientManage.CliUdpApiGateway.Run()
+	}()
 
 	fmt.Printf("Starting server at port %s...\n", port)
 	if err := server.ListenAndServe(); err != nil {

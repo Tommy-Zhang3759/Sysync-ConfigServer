@@ -11,12 +11,12 @@ type Task interface {
 }
 
 type Schedule struct {
-	execTime time.Time
-	do       func() error
+	ExecTime time.Time
+	Do       func() error
 }
 
 func (s *Schedule) Run() error {
-	return s.do()
+	return s.Do()
 }
 func (s *Schedule) Stop() error {
 	return nil
@@ -39,7 +39,7 @@ func NewTimeWheel(slotCount int, tickRate time.Duration) *TimeWheel {
 }
 
 func (tw *TimeWheel) AddTask(task *Schedule) {
-	delay := task.execTime.Sub(time.Now())
+	delay := task.ExecTime.Sub(time.Now())
 	if delay < 0 {
 		delay = 0
 	}
@@ -54,7 +54,7 @@ func (tw *TimeWheel) Start() {
 		slot := tw.slots[tw.current]
 		for e := slot.Front(); e != nil; e = e.Next() {
 			task := e.Value.(*Schedule)
-			if time.Now().After(task.execTime) {
+			if time.Now().After(task.ExecTime) {
 				task.Run()
 				slot.Remove(e)
 			}
@@ -67,14 +67,14 @@ func main() {
 	tw := NewTimeWheel(10, 1*time.Second)
 
 	tw.AddTask(&Schedule{
-		execTime: time.Now().Add(3 * time.Second),
+		ExecTime: time.Now().Add(3 * time.Second),
 		action: func() {
 			fmt.Println("Schedule executed after 3 seconds")
 		},
 	})
 
 	tw.AddTask(&Schedule{
-		execTime: time.Now().Add(5 * time.Second),
+		ExecTime: time.Now().Add(5 * time.Second),
 		action: func() {
 			fmt.Println("Schedule executed after 5 seconds")
 		},

@@ -6,35 +6,61 @@ import (
 	"net"
 )
 
-type reqMessage struct {
-	Source net.UDPAddr
-	Text   map[string]interface{}
+type UDPMessage struct {
+	Addr net.UDPAddr
+	Text map[string]interface{}
 }
 
-type UDPAPIPort struct {
-	KeyWord    string
-	messageQue utils.Queue
+type UDPAPIPortTemp struct {
+	keyWord    string
+	messageQue *utils.Queue
 	Gateway    *UDPAPIGateway
 
 	endRun chan bool
 }
 
-func (u *UDPAPIPort) newMess(mess reqMessage) {
+func (u *UDPAPIPortTemp) SetKeyWord(key string) {
+	u.keyWord = key
+	return
+}
+
+func (u *UDPAPIPortTemp) KeyWord() string {
+	return u.keyWord
+}
+
+func (u *UDPAPIPortTemp) Start() error {
+	go func() {
+		_ = u.Run()
+	}()
+	return nil
+}
+
+func (u *UDPAPIPortTemp) Stop() error {
+	u.endRun <- true
+	return nil
+}
+
+func (u *UDPAPIPortTemp) NewMess(mess UDPMessage) {
 	u.messageQue.Append(mess)
 }
 
-func (u *UDPAPIPort) run() error { // a template to write APIs' definition
+func (u *UDPAPIPortTemp) Init(gateway *UDPAPIGateway) {
+	u.Gateway = gateway
+	u.messageQue = utils.NewQueue()
+}
+
+func (u *UDPAPIPortTemp) Run() error { // a template to write APIs' definition
 	stop := false
 
 	for stop == false {
-		reqPack := u.messageQue.Pop().(reqMessage)
+		reqPack := u.messageQue.Pop().(UDPMessage)
 
 		select {
 		case <-u.endRun:
 			fmt.Println("Received stop signal, goroutine exiting...")
 			stop = true
 		default:
-			err := u.Gateway.sendMess(reqPack.Source, []byte(reqPack.Text["f_name"].(string)))
+			err := u.Gateway.SendMess([]byte(reqPack.Text["f_name"].(string)), reqPack.Addr)
 			if err != nil {
 				return err
 			}
@@ -45,7 +71,7 @@ func (u *UDPAPIPort) run() error { // a template to write APIs' definition
 }
 
 type UDPAPIGateway struct { // listen api calls on a specific port
-	portList map[string]*UDPAPIPort
+	portList map[string]UDPAPIPort // pointer point to a real port structure
 	Port     int
 	statCode int
 
@@ -54,28 +80,23 @@ type UDPAPIGateway struct { // listen api calls on a specific port
 	endRun chan bool
 }
 
-func (a *UDPAPIGateway) sendMess(destIP net.UDPAddr, mess []byte) error {
-
-	conn, err := net.DialUDP("udp", nil, &destIP)
-	if err != nil {
-		fmt.Println("Error connecting:", err)
-		return err
-	}
-	defer func(conn *net.UDPConn) {
-		err := conn.Close()
+func (a *UDPAPIGateway) SendMess(mess []byte, destIPs ...net.UDPAddr) error {
+	for _, destIP := range destIPs {
+		conn, err := net.DialUDP("udp", nil, &destIP)
 		if err != nil {
-			return
+			fmt.Println("Error connecting:", err)
+			return err
 		}
-	}(conn)
 
-	_, err = conn.Write(mess)
-	if err != nil {
-		fmt.Println("Error sending UDP message:", err)
-		return err
+		_, err = conn.Write(mess)
+		if err != nil {
+			fmt.Println("Error sending UDP message:", err)
+			return err
+		}
+		fmt.Println("Message sent to", destIP.String(), ": ", string(mess))
+		_ = conn.Close()
 	}
-	fmt.Println("Message sent to", destIP.String(), ": ", mess)
 	return nil
-
 }
 
 func (a *UDPAPIGateway) Init() error {
@@ -116,9 +137,9 @@ func (a *UDPAPIGateway) Run() error {
 					fmt.Println("Error decoding form UDP API message:", jsonErr.Error())
 				}
 
-				a.portList[messJson["f_name"].(string)].newMess(reqMessage{
-					Source: addr,
-					Text:   messJson,
+				a.portList[messJson["f_name"].(string)].NewMess(UDPMessage{
+					Addr: addr,
+					Text: messJson,
 				})
 			}(buffer[:n], *addr.(*net.UDPAddr))
 		}
@@ -136,24 +157,27 @@ func (a *UDPAPIGateway) Stop() error {
 	return nil
 }
 
-func (a *UDPAPIGateway) Add(port *UDPAPIPort) error {
-	if a.portList == nil {
-		a.portList = make(map[string]*UDPAPIPort)
-	}
+type UDPAPIPort interface {
+	Run() error
+	Start() error
+	Stop() error
+	NewMess(mess UDPMessage)
+	KeyWord() string
+	Init(gateway *UDPAPIGateway)
+	SetKeyWord(key string)
+}
 
-	if _, ok := a.portList[port.KeyWord]; ok {
-		return fmt.Errorf("port %s already exists", port.KeyWord)
+func (a *UDPAPIGateway) Add(port UDPAPIPort) error {
+	if _, ok := a.portList[port.KeyWord()]; ok {
+		return fmt.Errorf("port %s already exists", port.KeyWord())
 	} else {
-		port.Gateway = a
-		a.portList[port.KeyWord] = port
+		port.Init(a)
+		a.portList[port.KeyWord()] = port
 		return nil
 	}
 }
 
 func (a *UDPAPIGateway) Remove(keyWord string) error {
-	if a.portList == nil {
-		a.portList = make(map[string]*UDPAPIPort)
-	}
 	if _, ok := a.portList[keyWord]; ok {
 		delete(a.portList, keyWord)
 	} else {
