@@ -157,6 +157,18 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		//if addErr == nil {
 		//	_ = commandServer.Run()
 		//}
+		//
+		//
+	case "set_server_info":
+		sender := APIGateway.MessSending{
+			Dest: addrs,
+			MessContent: map[string]interface{}{
+				"f_name":      "set_server_info",
+				"server_ip":   bodyJson["server_ip"].(string),
+				"server_port": bodyJson["server_port"].(int),
+			},
+		}
+		_ = sender.Run()
 	}
 
 }

@@ -89,8 +89,12 @@ func (u *HostNameReq) Run() error {
 	return nil
 }
 
-type sendCommandToHost struct {
+type SendCommandToHost struct {
 	UDPAPIPortTemp
+}
+
+func (h *SendCommandToHost) Run() error {
+	return nil
 }
 
 type MessSending struct {
