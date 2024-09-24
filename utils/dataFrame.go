@@ -2,13 +2,15 @@ package utils
 
 import (
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"os"
 )
 
 type CSVDataBase struct {
-	file   os.File
-	reader *csv.Reader
+	file    os.File
+	reader  *csv.Reader
+	csvData [][]string
 }
 
 func (c *CSVDataBase) OpenDB(path string) error {
@@ -23,7 +25,7 @@ func (c *CSVDataBase) OpenDB(path string) error {
 	// 创建一个CSV reader
 	c.reader = csv.NewReader(file)
 
-	csvData := make([][]string, 0)
+	c.csvData = make([][]string, 0)
 
 	// 逐行读取CSV内容
 	for {
@@ -36,7 +38,7 @@ func (c *CSVDataBase) OpenDB(path string) error {
 			fmt.Println("Error reading record:", err)
 			return err
 		}
-		csvData = append(csvData, record)
+		c.csvData = append(c.csvData, record)
 		// 处理每行的内容
 		fmt.Println("Record:", record)
 	}
@@ -47,27 +49,53 @@ func (c *CSVDataBase) CloseDB() error {
 	return c.file.Close()
 }
 
-func (c *CSVDataBase) GetRowData(key string, keyColNum int) []string {
+func (c *CSVDataBase) GetRowData(RawIndex int) ([]string, error) {
+	return c.csvData[RawIndex], nil
+}
+
+func (c *CSVDataBase) GetCellData(key string, RawIndex int) (string, error) {
+	found := false
+	index := 0
+	for index = range c.csvData[0] {
+		if c.csvData[index][index] == key {
+			found = true
+			break
+		}
+	}
+	if !found {
+		fmt.Println("Error getting cell data, cannot find key: ", key)
+		return "", errors.New("key not found")
+	}
+	return c.csvData[RawIndex][index], nil
+}
+
+func (c *CSVDataBase) SetRowData(RawIndex int, data []string) error {
+	c.csvData[RawIndex] = data
 	return nil
 }
 
-func (c *CSVDataBase) GetCellData(key string, keyColNum int, valueColNum int) []string {
-	return nil
-}
-
-func (c *CSVDataBase) SaveRowData(key string, keyColNum int) error {
-	return nil
-}
-
-func (c *CSVDataBase) SaveCellData(key string, keyColNum int, valueColNum int) error {
+func (c *CSVDataBase) SetCellData(key string, RawIndex int, data string) error {
+	found := false
+	index := 0
+	for index = range c.csvData[0] {
+		if c.csvData[index][index] == key {
+			found = true
+			break
+		}
+	}
+	if !found {
+		fmt.Println("Error getting cell data, cannot find key: ", key)
+		return errors.New("key not found")
+	}
+	c.csvData[RawIndex][index] = data
 	return nil
 }
 
 type DataFrame interface {
-	GetRowData(key string, keyColNum int) []string
-	GetCellData(key string, keyColNum int, valueColNum int) []string
-	SaveRowData(key string, keyColNum int) error
-	SaveCellData(key string, keyColNum int, valueColNum int) error
+	GetRowData(RawIndex int) ([]string, error)
+	GetCellData(key string, RawIndex int) (string, error)
+	SetRowData(RawIndex int, data []string) error
+	SetCellData(key string, RawIndex int, data string) error
 
 	OpenDB(path string) error
 	CloseDB() error
