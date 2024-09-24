@@ -47,7 +47,8 @@ func (c *CSVDataBase) CloseDB() error {
 	return c.file.Close()
 }
 
-func (c *CSVDataBase) GetRowData(key string, keyColNum int) []string {
+func (c *CSVDataBase) GetRowData(keyColNum int) []string {
+
 	return nil
 }
 
