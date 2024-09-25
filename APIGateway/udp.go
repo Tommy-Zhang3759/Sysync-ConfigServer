@@ -24,7 +24,7 @@ func (u *UDPAPIPortTemp) SetKeyWord(key string) {
 	return
 }
 
-func (u *UDPAPIPortTemp) KeyWord() string {
+func (u *UDPAPIPortTemp) GetKeyWord() string {
 	return u.keyWord
 }
 
@@ -162,17 +162,17 @@ type UDPAPIPort interface {
 	Start() error
 	Stop() error
 	NewMess(mess UDPMessage)
-	KeyWord() string
+	GetKeyWord() string
 	Init(gateway *UDPAPIGateway)
 	SetKeyWord(key string)
 }
 
 func (a *UDPAPIGateway) Add(port UDPAPIPort) error {
-	if _, ok := a.portList[port.KeyWord()]; ok {
-		return fmt.Errorf("port %s already exists", port.KeyWord())
+	if _, ok := a.portList[port.GetKeyWord()]; ok {
+		return fmt.Errorf("port %s already exists", port.GetKeyWord())
 	} else {
 		port.Init(a)
-		a.portList[port.KeyWord()] = port
+		a.portList[port.GetKeyWord()] = port
 		return nil
 	}
 }
