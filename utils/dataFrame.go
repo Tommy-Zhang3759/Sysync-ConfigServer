@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"os"
 )
 
@@ -15,7 +14,7 @@ type CSVDataBase struct {
 func (c *CSVDataBase) OpenDB(path string) error {
 	var file, err = os.Open(path)
 	if err != nil {
-		fmt.Println("Error opening file:", err)
+		//fmt.Println("Error opening file:", err)
 		return err
 	}
 
@@ -29,7 +28,7 @@ func (c *CSVDataBase) OpenDB(path string) error {
 			if err.Error() == "EOF" { // 如果读取到文件末尾，err 会是 io.EOF，可以正常退出循环
 				break
 			}
-			fmt.Println("Error reading record:", err)
+			//fmt.Println("Error reading record:", err)
 			return err
 		}
 		c.csvData = append(c.csvData, record)
@@ -43,7 +42,7 @@ func (c *CSVDataBase) SaveDB() error {
 
 	for _, record := range c.csvData {
 		if err := writer.Write(record); err != nil {
-			fmt.Println("Error writing record:", err)
+			//fmt.Println("Error writing record:", err)
 			return err
 		}
 	}
@@ -68,8 +67,8 @@ func (c *CSVDataBase) GetCellData(key string, RowIndex int) (string, error) {
 		}
 	}
 	if !found {
-		fmt.Println("Error getting cell data, cannot find key: ", key)
-		return "", errors.New("key not found")
+		//fmt.Println("Error getting cell data, cannot find key: ", key)
+		return "", errors.New("key not found: " + key)
 	}
 	return c.csvData[RowIndex][index], nil
 }
@@ -93,8 +92,8 @@ func (c *CSVDataBase) SetCellData(key string, RowIndex int, data string) error {
 		}
 	}
 	if !found {
-		fmt.Println("Error getting cell data, cannot find key: ", key)
-		return errors.New("key not found")
+		//fmt.Println("Error getting cell data, cannot find key: ", key)
+		return errors.New("key not found: " + key)
 	}
 	c.csvData[RowIndex][index] = data
 	return nil
