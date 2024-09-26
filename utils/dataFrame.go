@@ -9,7 +9,6 @@ import (
 
 type CSVDataBase struct {
 	file    os.File
-	reader  *csv.Reader
 	csvData [][]string
 }
 
@@ -21,15 +20,14 @@ func (c *CSVDataBase) OpenDB(path string) error {
 		return err
 	}
 	c.file = *file
-
 	// 创建一个CSV reader
-	c.reader = csv.NewReader(file)
+	var reader = csv.NewReader(file)
 
 	c.csvData = make([][]string, 0)
 
 	// 逐行读取CSV内容
 	for {
-		record, err := c.reader.Read()
+		record, err := reader.Read()
 		if err != nil {
 			// 如果读取到文件末尾，err 会是 io.EOF，可以正常退出循环
 			if err.Error() == "EOF" {
@@ -94,9 +92,11 @@ func (c *CSVDataBase) SetCellData(key string, RawIndex int, data string) error {
 type DataFrame interface {
 	GetRowData(RawIndex int) ([]string, error)
 	GetCellData(key string, RawIndex int) (string, error)
+	GetAllData() ([][]string, error)
 	SetRowData(RawIndex int, data []string) error
 	SetCellData(key string, RawIndex int, data string) error
 
 	OpenDB(path string) error
+	SaveDB() error
 	CloseDB() error
 }
