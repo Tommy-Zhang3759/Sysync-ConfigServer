@@ -19,6 +19,7 @@ func OpenCSV(path string) (CSVDataBase, error) {
 	}
 
 	var file, err = os.Open(path)
+
 	if err != nil {
 		return csvDataBase, err
 	}
