@@ -13,32 +13,39 @@ type CSVDataBase struct {
 }
 
 func (c *CSVDataBase) OpenDB(path string) error {
-	// 打开CSV文件
 	var file, err = os.Open(path)
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return err
 	}
-	c.file = *file
-	// 创建一个CSV reader
-	var reader = csv.NewReader(file)
 
+	c.file = *file
+	var reader = csv.NewReader(file)
 	c.csvData = make([][]string, 0)
 
-	// 逐行读取CSV内容
 	for {
 		record, err := reader.Read()
 		if err != nil {
-			// 如果读取到文件末尾，err 会是 io.EOF，可以正常退出循环
-			if err.Error() == "EOF" {
+			if err.Error() == "EOF" { // 如果读取到文件末尾，err 会是 io.EOF，可以正常退出循环
 				break
 			}
 			fmt.Println("Error reading record:", err)
 			return err
 		}
 		c.csvData = append(c.csvData, record)
-		// 处理每行的内容
-		fmt.Println("Record:", record)
+	}
+	return nil
+}
+
+func (c *CSVDataBase) SaveDB() error {
+	var writer = csv.NewWriter(&c.file)
+	defer writer.Flush()
+
+	for _, record := range c.csvData {
+		if err := writer.Write(record); err != nil {
+			fmt.Println("Error writing record:", err)
+			return err
+		}
 	}
 	return nil
 }
@@ -65,6 +72,10 @@ func (c *CSVDataBase) GetCellData(key string, RawIndex int) (string, error) {
 		return "", errors.New("key not found")
 	}
 	return c.csvData[RawIndex][index], nil
+}
+
+func (c *CSVDataBase) GetAllData() ([][]string, error) {
+	return c.csvData, nil
 }
 
 func (c *CSVDataBase) SetRowData(RawIndex int, data []string) error {
