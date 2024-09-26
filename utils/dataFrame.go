@@ -54,11 +54,11 @@ func (c *CSVDataBase) CloseDB() error {
 	return c.file.Close()
 }
 
-func (c *CSVDataBase) GetRowData(RawIndex int) ([]string, error) {
-	return c.csvData[RawIndex], nil
+func (c *CSVDataBase) GetRowData(RowIndex int) ([]string, error) {
+	return c.csvData[RowIndex], nil
 }
 
-func (c *CSVDataBase) GetCellData(key string, RawIndex int) (string, error) {
+func (c *CSVDataBase) GetCellData(key string, RowIndex int) (string, error) {
 	found := false
 	index := 0
 	for index = range c.csvData[0] {
@@ -71,19 +71,19 @@ func (c *CSVDataBase) GetCellData(key string, RawIndex int) (string, error) {
 		fmt.Println("Error getting cell data, cannot find key: ", key)
 		return "", errors.New("key not found")
 	}
-	return c.csvData[RawIndex][index], nil
+	return c.csvData[RowIndex][index], nil
 }
 
 func (c *CSVDataBase) GetAllData() ([][]string, error) {
 	return c.csvData, nil
 }
 
-func (c *CSVDataBase) SetRowData(RawIndex int, data []string) error {
-	c.csvData[RawIndex] = data
+func (c *CSVDataBase) SetRowData(RowIndex int, data []string) error {
+	c.csvData[RowIndex] = data
 	return nil
 }
 
-func (c *CSVDataBase) SetCellData(key string, RawIndex int, data string) error {
+func (c *CSVDataBase) SetCellData(key string, RowIndex int, data string) error {
 	found := false
 	index := 0
 	for index = range c.csvData[0] {
@@ -96,16 +96,16 @@ func (c *CSVDataBase) SetCellData(key string, RawIndex int, data string) error {
 		fmt.Println("Error getting cell data, cannot find key: ", key)
 		return errors.New("key not found")
 	}
-	c.csvData[RawIndex][index] = data
+	c.csvData[RowIndex][index] = data
 	return nil
 }
 
 type DataFrame interface {
-	GetRowData(RawIndex int) ([]string, error)
-	GetCellData(key string, RawIndex int) (string, error)
+	GetRowData(RowIndex int) ([]string, error)
+	GetCellData(key string, RowIndex int) (string, error)
 	GetAllData() ([][]string, error)
-	SetRowData(RawIndex int, data []string) error
-	SetCellData(key string, RawIndex int, data string) error
+	SetRowData(RowIndex int, data []string) error
+	SetCellData(key string, RowIndex int, data string) error
 
 	OpenDB(path string) error
 	SaveDB() error
