@@ -62,7 +62,7 @@ func (c *CSVDataBase) GetCellData(key string, RowIndex int) (string, error) {
 	found := false
 	index := 0
 	for index = range c.csvData[0] {
-		if c.csvData[index][index] == key {
+		if c.csvData[0][index] == key {
 			found = true
 			break
 		}
@@ -87,7 +87,7 @@ func (c *CSVDataBase) SetCellData(key string, RowIndex int, data string) error {
 	found := false
 	index := 0
 	for index = range c.csvData[0] {
-		if c.csvData[index][index] == key {
+		if c.csvData[0][index] == key {
 			found = true
 			break
 		}
