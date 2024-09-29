@@ -2,3 +2,6 @@
 .idea
 resources/*
 test/*
+go.sum
+.vscode
+*.code-workspace
