@@ -1,8 +1,8 @@
-package database
+package DataFrame
 
 import "database/sql"
 
-type Database interface {
+type DataFrame interface {
 	Connect(connectionString string) error
 	Close() error
 	Insert(query string, args ...interface{}) (sql.Result, error)

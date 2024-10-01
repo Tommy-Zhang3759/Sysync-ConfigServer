@@ -2,7 +2,6 @@ package utils
 
 import (
 	"encoding/csv"
-	"errors"
 	"fmt"
 	"os"
 )
@@ -19,9 +18,8 @@ func OpenCSV(path string) (CSVDataBase, error) {
 	}
 
 	var file, err = os.Open(path)
-
 	if err != nil {
-		return csvDataBase, err
+		return csvDataBase, fmt.Errorf("failed to open CSV file %s: %w", path, err)
 	}
 
 	var reader = csv.NewReader(file)
@@ -32,49 +30,51 @@ func OpenCSV(path string) (CSVDataBase, error) {
 			if err.Error() == "EOF" { // 如果读取到文件末尾，err 会是 io.EOF，可以正常退出循环
 				break
 			}
-			return csvDataBase, err
+			return csvDataBase, fmt.Errorf("error reading CSV file: %w", err)
 		}
 		csvDataBase.csvData = append(csvDataBase.csvData, record)
 	}
-	err = file.Close()
-	if err != nil {
-		return csvDataBase, err
+
+	if err = file.Close(); err != nil {
+		return csvDataBase, fmt.Errorf("error closing CSV file: %w", err)
 	}
+
 	return csvDataBase, nil
 }
 
 func (c *CSVDataBase) SaveCSV() error {
 	var file, err = os.OpenFile(c.filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open file for writing: %w", err)
 	}
+
 	var writer = csv.NewWriter(file)
 	defer writer.Flush()
 
 	for _, record := range c.csvData {
 		fmt.Println(record)
 		if err := writer.Write(record); err != nil {
-			return err
+			return fmt.Errorf("failed to write record to CSV file: %w", err)
 		}
 	}
+
 	writer.Flush()
 	if err := writer.Error(); err != nil {
-		return err
+		return fmt.Errorf("error writing CSV file: %w", err)
 	}
 
-	err = file.Close()
-	if err != nil {
-		return err
+	if err = file.Close(); err != nil {
+		return fmt.Errorf("error closing file after writing: %w", err)
 	}
+
 	return nil
 }
 
 func (c *CSVDataBase) GetRowData(RowIndex int) ([]string, error) {
 	if RowIndex >= 0 && RowIndex < len(c.csvData) {
 		return c.csvData[RowIndex], nil
-	} else {
-		return nil, errors.New(fmt.Sprintf("Row index %d is out of range", RowIndex))
 	}
+	return nil, fmt.Errorf("row index %d is out of range", RowIndex)
 }
 
 func (c *CSVDataBase) GetCellData(key string, RowIndex int) (string, error) {
@@ -88,12 +88,11 @@ func (c *CSVDataBase) GetCellData(key string, RowIndex int) (string, error) {
 			}
 		}
 		if !found {
-			return "", errors.New("Key not found: " + key)
+			return "", fmt.Errorf("key not found: %s", key)
 		}
 		return c.csvData[RowIndex][index], nil
-	} else {
-		return "", errors.New(fmt.Sprintf("Row index %d is out of range", RowIndex))
 	}
+	return "", fmt.Errorf("row index %d is out of range", RowIndex)
 }
 
 func (c *CSVDataBase) GetAllData() ([][]string, error) {
@@ -104,9 +103,8 @@ func (c *CSVDataBase) SetRowData(RowIndex int, data []string) error {
 	if RowIndex >= 0 && RowIndex < len(c.csvData) {
 		c.csvData[RowIndex] = data
 		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Row index %d is out of range", RowIndex))
 	}
+	return fmt.Errorf("row index %d is out of range", RowIndex)
 }
 
 func (c *CSVDataBase) SetCellData(key string, RowIndex int, data string) error {
@@ -120,17 +118,15 @@ func (c *CSVDataBase) SetCellData(key string, RowIndex int, data string) error {
 			}
 		}
 		if !found {
-			//fmt.Println("Error getting cell data, cannot find key: ", key)
-			return errors.New("Key not found: " + key)
+			return fmt.Errorf("key not found: %s", key)
 		}
 		c.csvData[RowIndex][index] = data
 		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Row index %d is out of range", RowIndex))
 	}
+	return fmt.Errorf("row index %d is out of range", RowIndex)
 }
 
-type DataFrame interface {
+type CSVDataFrame interface {
 	GetRowData(RowIndex int) ([]string, error)
 	GetCellData(key string, RowIndex int) (string, error)
 	GetAllData() ([][]string, error)
@@ -139,41 +135,4 @@ type DataFrame interface {
 
 	OpenCSV(path string) error
 	SaveCSV() error
-}
-
-func demo() {
-	csv_, err := OpenCSV("./test/example.csv_")
-	if err != nil {
-		println(err.Error())
-		return
-	}
-	fmt.Println(csv_.GetAllData())
-	fmt.Println(csv_.GetRowData(1))
-	fmt.Println(csv_.GetRowData(2))
-	fmt.Println(csv_.GetRowData(4)) // make an error
-	fmt.Println(csv_.GetCellData("Name", 1))
-	fmt.Println(csv_.GetCellData("Age", 2))
-	fmt.Println(csv_.GetCellData("City", 3))
-	err = csv_.SetRowData(1, []string{"Alice", "25", "New York"})
-	if err != nil {
-		println(err.Error())
-		return
-	}
-	err = csv_.SetCellData("Name", 2, "Peler")
-	if err != nil {
-		println(err.Error())
-		return
-	}
-	fmt.Println(csv_.GetAllData())
-	fmt.Println(csv_.GetRowData(1))
-	fmt.Println(csv_.GetRowData(2))
-	fmt.Println(csv_.GetRowData(3))
-	fmt.Println(csv_.GetCellData("Name", 1))
-	fmt.Println(csv_.GetCellData("Age", 2))
-	fmt.Println(csv_.GetCellData("City", 3))
-	err = csv_.SaveCSV()
-	if err != nil {
-		println(err.Error())
-		return
-	}
 }
