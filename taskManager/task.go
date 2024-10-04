@@ -1,7 +1,8 @@
-package clientManage
+package TaskManager
 
 import (
 	"container/list"
+	"fmt"
 	"time"
 )
 
@@ -10,16 +11,17 @@ type Task interface {
 	Stop() error
 }
 
-type Schedule struct {
+type TimeWhellMember struct {
 	ExecTime time.Time
-	Do       func() error
+	task     Task
 }
 
-func (s *Schedule) Run() error {
-	return s.Do()
+func (s *TimeWhellMember) Run() error {
+	return s.task.Run()
 }
-func (s *Schedule) Stop() error {
-	return nil
+
+func (s *TimeWhellMember) Stop() error {
+	return s.task.Stop()
 }
 
 type TimeWheel struct {
@@ -38,13 +40,21 @@ func NewTimeWheel(slotCount int, tickRate time.Duration) *TimeWheel {
 	}
 }
 
-func (tw *TimeWheel) AddTask(task *Schedule) {
-	delay := task.ExecTime.Sub(time.Now())
+func (tw *TimeWheel) AddTask(task *TimeWhellMember) error {
+	delay := time.Until(task.ExecTime)
 	if delay < 0 {
-		delay = 0
+		return fmt.Errorf("error: trying to add a expired task into time whell")
 	}
 	slotIndex := int(delay/tw.tickRate) % tw.slotCount
 	tw.slots[slotIndex].PushBack(task)
+	return nil
+}
+
+func NewTimeWheelMember(exeTime time.Time, exeFunc Task) *TimeWhellMember {
+	return &TimeWhellMember{
+		ExecTime: exeTime,
+		task:     exeFunc,
+	}
 }
 
 func (tw *TimeWheel) Start() {
@@ -53,11 +63,12 @@ func (tw *TimeWheel) Start() {
 		tw.current = (tw.current + 1) % tw.slotCount
 		slot := tw.slots[tw.current]
 		for e := slot.Front(); e != nil; e = e.Next() {
-			task := e.Value.(*Schedule)
-			if time.Now().After(task.ExecTime) {
-				task.Run()
-				slot.Remove(e)
-			}
+			go func(task *TimeWhellMember) {
+				if time.Now().After(task.ExecTime) {
+					task.Run()
+					slot.Remove(e)
+				}
+			}(e.Value.(*TimeWhellMember))
 		}
 	}
 }
