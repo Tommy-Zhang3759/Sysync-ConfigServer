@@ -1,7 +1,7 @@
 .gitignore
 .idea
 resources/*
-test/*
+test
 go.sum
 .vscode
 *.code-workspace
