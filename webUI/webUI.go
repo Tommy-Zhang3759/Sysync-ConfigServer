@@ -127,7 +127,9 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 
 		addErr := clientManage.CliUdpApiGateway.Add(&nameServer)
 		if addErr == nil {
-			_ = nameServer.Run()
+			go func() {
+				_ = nameServer.Run()
+			}()
 		}
 
 		//t2 := clientManage.Schedule{
