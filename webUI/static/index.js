@@ -1,62 +1,52 @@
-// WebSocket连接
-let socket = new WebSocket("ws://your-server-address");
-
-// 打开WebSocket连接
-socket.onopen = function () {
-    console.log("已连接到服务器");
-    // 请求客户端列表
-    socket.send(JSON.stringify({ action: "get_clients" }));
-};
-
-// 接收WebSocket消息
-socket.onmessage = function (event) {
-    const data = JSON.parse(event.data);
-
-    // 根据收到的消息类型执行不同的操作
-    if (data.type === "clients") {
-        loadClients(data.clients);
-    } else if (data.type === "client_info") {
-        showClientInfo(data.client);
-    } else if (data.type === "log") {
-        addLog(data.log);
-    } else if (data.type === "system_status") {
-        updateSystemStatus(data.status);
-    }
-};
-
-// 初始化客户端列表
-function loadClients(clients) {
-    const clientList = document.getElementById('client-list');
-    clientList.innerHTML = ''; // 清空当前列表
-    clients.forEach(client => {
-        const div = document.createElement('div');
-        div.className = 'client-item';
-        div.innerText = client.name;
-        div.onclick = () => requestClientInfo(client.id);
-        clientList.appendChild(div);
-    });
+// 初始化客户端列表，HTTP GET 请求
+function loadClients() {
+    fetch('/api/get_clients')
+        .then(response => response.json())
+        .then(data => {
+            const clientList = document.getElementById('client-list');
+            clientList.innerHTML = ''; // 清空当前列表
+            data.clients.forEach(client => {
+                const div = document.createElement('div');
+                div.className = 'client-item';
+                div.innerText = client.name;
+                div.onclick = () => requestClientInfo(client.id);
+                clientList.appendChild(div);
+            });
+        })
+        .catch(error => console.error('获取客户端列表时出错:', error));
 }
 
 // 请求选中客户端的详细信息
 function requestClientInfo(clientId) {
-    socket.send(JSON.stringify({ action: "get_client_info", id: clientId }));
-}
-
-// 显示选中客户端的信息
-function showClientInfo(client) {
-    const clientDetails = document.getElementById('client-details');
-    clientDetails.innerHTML = `
-        <p>名称: ${client.name}</p>
-        <p>IP: ${client.ip}</p>
-        <p>状态: ${client.status}</p>
-        <button onclick="performAction('${client.id}')">操作</button>
-    `;
+    fetch(`/api/get_client_info?id=${clientId}`)
+        .then(response => response.json())
+        .then(client => {
+            const clientDetails = document.getElementById('client-details');
+            clientDetails.innerHTML = `
+                <p>名称: ${client.name}</p>
+                <p>IP: ${client.ip}</p>
+                <p>状态: ${client.status}</p>
+                <button onclick="performAction('${client.id}')">操作</button>
+            `;
+        })
+        .catch(error => console.error('获取客户端信息时出错:', error));
 }
 
 // 模拟操作客户端的功能
 function performAction(clientId) {
     alert(`正在对客户端ID ${clientId} 执行操作`);
-    socket.send(JSON.stringify({ action: "perform_action", id: clientId }));
+    fetch('/api/perform_action', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: clientId })
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('操作成功:', data);
+        })
+        .catch(error => console.error('执行操作时出错:', error));
 }
 
 // 加载服务器日志
@@ -68,17 +58,12 @@ function addLog(logMessage) {
 }
 
 // 更新系统状态
-function updateSystemStatus(status) {
-    const statusElement = document.getElementById('system-status');
-    statusElement.innerText = status;
+function updateSystemStatus() {
+    fetch('/api/system_status')
+        .then(response => response.json())
+        .then(status => {
+            const statusElement = document.getElementById('system-status');
+            statusElement.innerText = status;
+        })
+        .catch(error => console.error('更新系统状态时出错:', error));
 }
-
-// 处理WebSocket关闭
-socket.onclose = function () {
-    console.log("连接已关闭");
-};
-
-// 处理WebSocket错误
-socket.onerror = function (error) {
-    console.log("WebSocket错误: ", error);
-};
