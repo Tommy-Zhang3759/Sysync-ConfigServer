@@ -11,8 +11,11 @@ func TestHostNameReq_Run(t *testing.T) {
 	p := HostNameReq{}
 	p.keyWord = "key"
 
-	gateway.Init()
-	go gateway.Run()
+	_ = gateway.Init()
+
+	go func() {
+		_ = gateway.Run()
+	}()
 	_ = gateway.Add(&p)
 	go func() {
 		_ = p.Run()
@@ -28,7 +31,9 @@ func TestHostNameReq_Run(t *testing.T) {
 
 	// 创建一个 UDP 连接（使用 nil 作为源地址，表示没有特定的源地址）
 	conn, _ := net.DialUDP("udp", nil, addr)
-	defer conn.Close()
+	defer func(conn *net.UDPConn) {
+		_ = conn.Close()
+	}(conn)
 
 	// 发送数据
 	_, _ = conn.Write(message)
