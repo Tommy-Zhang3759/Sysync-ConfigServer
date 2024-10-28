@@ -1,24 +1,28 @@
-// 初始化客户端列表，HTTP GET 请求
 function loadClients() {
-    fetch('/api/get_clients')
+    fetch('/api/cliInfo')
         .then(response => response.json())
         .then(data => {
+            console.log(data); // 打印返回的数据
             const clientList = document.getElementById('client-list');
             clientList.innerHTML = ''; // 清空当前列表
-            data.clients.forEach(client => {
-                const div = document.createElement('div');
-                div.className = 'client-item';
-                div.innerText = client.name;
-                div.onclick = () => requestClientInfo(client.id);
-                clientList.appendChild(div);
-            });
+
+            if (data.clients) { // 检查 clients 是否存在
+                data.clients.forEach(hostname => {
+                    const div = document.createElement('div');
+                    div.className = 'client-item';
+                    div.innerText = hostname; // 直接使用 hostname
+                    clientList.appendChild(div);
+                });
+            } else {
+                console.error('返回的数据中没有 clients 字段');
+            }
         })
         .catch(error => console.error('获取客户端列表时出错:', error));
 }
 
 // 请求选中客户端的详细信息
 function requestClientInfo(clientId) {
-    fetch(`/api/get_client_info?id=${clientId}`)
+    fetch(`/api/cliInfo?id=${clientId}`)
         .then(response => response.json())
         .then(client => {
             const clientDetails = document.getElementById('client-details');
@@ -67,3 +71,4 @@ function updateSystemStatus() {
         })
         .catch(error => console.error('更新系统状态时出错:', error));
 }
+

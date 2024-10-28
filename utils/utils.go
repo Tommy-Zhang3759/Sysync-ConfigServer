@@ -2,6 +2,8 @@ package utils
 
 import (
 	"bufio"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -93,4 +95,10 @@ func ParseUDPAddr(ip string, port string) (net.UDPAddr, error) {
 		IP:   parsedIP,
 		Port: p,
 	}, nil
+}
+
+func GenerateSHA256(input string) string {
+	hash := sha256.New()
+	hash.Write([]byte(input))
+	return hex.EncodeToString(hash.Sum(nil))
 }

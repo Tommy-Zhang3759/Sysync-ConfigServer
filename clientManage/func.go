@@ -7,7 +7,7 @@ import (
 var UdpHostPort = 6004
 var UdpClientPort = 6003
 
-var CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort) // definition of tcp port
+var CliUdpApiGateway *APIGateway.UDPAPIGateway = nil // definition of tcp port
 
 func SendCommand2Host(cmd string) {
 
