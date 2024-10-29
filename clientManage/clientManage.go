@@ -23,13 +23,13 @@ func Init(dbPath string) {
 }
 
 type Client struct {
-	HostName   string           `json:"host_name,omitempty"`
-	IpAddr     net.Addr         `json:"ip_addr,omitempty"`
-	MacAddr    net.HardwareAddr `json:"mac_addr,omitempty"`
-	StatusCode int              `json:"status_code,omitempty"`
-	OsVersion  string           `json:"os_version,omitempty"`
-	ProductId  string           `json:"product_id,omitempty"`
-	SysyncId   [32]byte         `json:"sysync_id,omitempty"`
+	HostName   string           `json:"host_name"`
+	IpAddr     net.Addr         `json:"ip_addr"`
+	MacAddr    net.HardwareAddr `json:"mac_addr"`
+	StatusCode int              `json:"status_code"`
+	OsVersion  string           `json:"os_version"`
+	ProductId  string           `json:"product_id"`
+	SysyncId   [32]byte         `json:"sysync_id"`
 
 	conn   *net.Conn
 	caught bool
@@ -77,13 +77,13 @@ func (c *Client) updateStatusCode(a int) {
 }
 
 type FriendlyClient struct {
-	HostName   string `json:"host_name,omitempty"`
-	IpAddr     string `json:"ip_addr,omitempty"`
-	MacAddr    string `json:"mac_addr,omitempty"`
-	StatusCode int    `json:"status_code,omitempty"`
-	OsVersion  string `json:"os_version,omitempty"`
-	ProductId  string `json:"product_id,omitempty"`
-	SysyncId   string `json:"sysync_id,omitempty"`
+	HostName   string `json:"host_name"`
+	IpAddr     string `json:"ip_addr"`
+	MacAddr    string `json:"mac_addr"`
+	StatusCode int    `json:"status_code"`
+	OsVersion  string `json:"os_version"`
+	ProductId  string `json:"product_id"`
+	SysyncId   string `json:"sysync_id"`
 }
 
 // HumanFriendly converts a Client struct to a human-friendly JSON format.
