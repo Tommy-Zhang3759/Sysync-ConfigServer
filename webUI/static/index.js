@@ -1,39 +1,48 @@
-function loadClients() {
-    fetch('/api/cliInfo')
-        .then(response => response.json())
-        .then(data => {
-            console.log(data); // 打印返回的数据
-            const clientList = document.getElementById('client-list');
-            clientList.innerHTML = ''; // 清空当前列表
+async function loadClients() {
+    try {
+        const response = await fetch('/api/cliInfo');
+        const data = await response.json(); // 使用 await 解析 JSON
 
-            if (data.clients) { // 检查 clients 是否存在
-                data.clients.forEach(hostname => {
-                    const div = document.createElement('div');
-                    div.className = 'client-item';
-                    div.innerText = hostname; // 直接使用 hostname
-                    clientList.appendChild(div);
-                });
-            } else {
-                console.error('返回的数据中没有 clients 字段');
-            }
-        })
-        .catch(error => console.error('获取客户端列表时出错:', error));
+        console.log(data); // 打印返回的数据
+        const clientList = document.getElementById('client-list');
+        clientList.innerHTML = ''; // 清空当前列表
+
+        if (data) {
+            data.forEach(hostname => {
+                const div = document.createElement('div');
+                div.className = 'client-item';
+                div.innerText = hostname; // 直接使用 hostname
+                clientList.appendChild(div);
+                div.onclick = () => clientDetailedMenu(hostname);
+            });
+        } else {
+            console.error('返回的数据中没有 clients 字段');
+        }
+    } catch (error) {
+        console.error('获取客户端列表时出错:', error);
+    }
 }
 
-// 请求选中客户端的详细信息
-function requestClientInfo(clientId) {
-    fetch(`/api/cliInfo?id=${clientId}`)
-        .then(response => response.json())
-        .then(client => {
-            const clientDetails = document.getElementById('client-details');
-            clientDetails.innerHTML = `
-                <p>名称: ${client.name}</p>
-                <p>IP: ${client.ip}</p>
-                <p>状态: ${client.status}</p>
-                <button onclick="performAction('${client.id}')">操作</button>
-            `;
-        })
-        .catch(error => console.error('获取客户端信息时出错:', error));
+async function clientDetailedMenu(hostname) {
+    const c = await requestClientInfo(hostname);
+    const clientDetails = document.getElementById('client-details');
+
+    const paddedStatusCode = String(c.status_code).padStart(3, '0');
+
+    clientDetails.innerHTML = `
+        <p>Host name: ${c.host_name}</p>
+        <p>IP: ${c.ip_addr}</p>
+        <p>状态: ${paddedStatusCode}</p>
+        <button onclick="performAction('${c.id}')">操作</button>
+    `;
+}
+
+async function requestClientInfo(clientId) {
+    const resp = await fetch(`/api/cliInfo?id=${clientId}`);
+    const client = (await resp.json())[0];
+
+    console.log(client);
+    return client;
 }
 
 // 模拟操作客户端的功能
@@ -53,7 +62,6 @@ function performAction(clientId) {
         .catch(error => console.error('执行操作时出错:', error));
 }
 
-// 加载服务器日志
 function addLog(logMessage) {
     const logContent = document.getElementById('log-content');
     const p = document.createElement('p');
@@ -61,7 +69,6 @@ function addLog(logMessage) {
     logContent.appendChild(p);
 }
 
-// 更新系统状态
 function updateSystemStatus() {
     fetch('/api/system_status')
         .then(response => response.json())
@@ -72,3 +79,4 @@ function updateSystemStatus() {
         .catch(error => console.error('更新系统状态时出错:', error));
 }
 
+loadClients()
