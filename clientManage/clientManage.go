@@ -5,9 +5,11 @@ import (
 	DataFrame "ConfigServer/utils/dataFrame"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"net"
 	"sort"
+	"time"
 )
 
 var container *CliContainer = nil
@@ -21,13 +23,13 @@ func Init(dbPath string) {
 }
 
 type Client struct {
-	hostName   string
-	ipAddr     net.Addr
-	macAddr    net.HardwareAddr
-	statusCode int
-	osVersion  string
-	productId  string
-	sysyncId   [32]byte
+	HostName   string           `json:"host_name,omitempty"`
+	IpAddr     net.Addr         `json:"ip_addr,omitempty"`
+	MacAddr    net.HardwareAddr `json:"mac_addr,omitempty"`
+	StatusCode int              `json:"status_code,omitempty"`
+	OsVersion  string           `json:"os_version,omitempty"`
+	ProductId  string           `json:"product_id,omitempty"`
+	SysyncId   [32]byte         `json:"sysync_id,omitempty"`
 
 	conn   *net.Conn
 	caught bool
@@ -52,13 +54,13 @@ func NewClient(
 	sysyncId := sha256.Sum256(append([]byte(macAddr.String()+productId), rand...))
 
 	return &Client{
-		hostName:   hostName,
-		ipAddr:     ipAddr,
-		macAddr:    macAddr,
-		statusCode: statusCode,
-		osVersion:  osVersion,
-		productId:  productId,
-		sysyncId:   sysyncId,
+		HostName:   hostName,
+		IpAddr:     ipAddr,
+		MacAddr:    macAddr,
+		StatusCode: statusCode,
+		OsVersion:  osVersion,
+		ProductId:  productId,
+		SysyncId:   sysyncId,
 	}
 }
 
@@ -71,7 +73,32 @@ func (c *Client) logOut() {
 }
 
 func (c *Client) updateStatusCode(a int) {
-	c.statusCode = a
+	c.StatusCode = a
+}
+
+type FriendlyClient struct {
+	HostName   string `json:"host_name,omitempty"`
+	IpAddr     string `json:"ip_addr,omitempty"`
+	MacAddr    string `json:"mac_addr,omitempty"`
+	StatusCode int    `json:"status_code,omitempty"`
+	OsVersion  string `json:"os_version,omitempty"`
+	ProductId  string `json:"product_id,omitempty"`
+	SysyncId   string `json:"sysync_id,omitempty"`
+}
+
+// HumanFriendly converts a Client struct to a human-friendly JSON format.
+func (c *Client) HumanFriendly() (FriendlyClient, error) {
+	friendly := FriendlyClient{
+		HostName:   c.HostName,
+		IpAddr:     c.IpAddr.String(),
+		MacAddr:    c.MacAddr.String(),
+		StatusCode: c.StatusCode,
+		OsVersion:  c.OsVersion,
+		ProductId:  c.ProductId,
+		SysyncId:   hex.EncodeToString(c.SysyncId[:]),
+	}
+
+	return friendly, nil
 }
 
 type CliContainer struct {
@@ -136,13 +163,13 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 
 		// 创建 Client 实例并添加到容器
 		client := &Client{
-			hostName:   hostName,
-			ipAddr:     &net.IPAddr{IP: ipAddr},
-			macAddr:    macAddr,
-			statusCode: statusCode,
-			osVersion:  osVersion,
-			productId:  productId,
-			sysyncId:   [32]byte(sysyncId),
+			HostName:   hostName,
+			IpAddr:     &net.IPAddr{IP: ipAddr},
+			MacAddr:    macAddr,
+			StatusCode: statusCode,
+			OsVersion:  osVersion,
+			ProductId:  productId,
+			SysyncId:   [32]byte(sysyncId),
 		}
 
 		c.Push(client)
@@ -156,12 +183,12 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 }
 
 func (c *CliContainer) Push(cli *Client) error {
-	c.container[cli.hostName] = cli
+	c.container[cli.HostName] = cli
 	return nil
 }
 
 func (c *CliContainer) Delete(key string) error {
-	if _, ok := c.container[key]; ok {
+	if c.Exists(key) {
 		c.container[key] = nil
 		delete(c.container, key)
 		return nil
@@ -171,7 +198,7 @@ func (c *CliContainer) Delete(key string) error {
 }
 
 func (c *CliContainer) Pop(key string) (*Client, error) {
-	if _, ok := c.container[key]; ok {
+	if c.Exists(key) {
 		cli := c.container[key]
 		delete(c.container, key)
 		return cli, nil
@@ -180,8 +207,21 @@ func (c *CliContainer) Pop(key string) (*Client, error) {
 	}
 }
 
-func (c *CliContainer) Find(key string) *Client {
-	return c.container[key]
+func (c *CliContainer) Get(key string) (*Client, error) {
+	if c.Exists(key) {
+		cli := c.container[key]
+		return cli, nil
+	} else {
+		return nil, fmt.Errorf("host name dose not exists")
+	}
+}
+
+func (c *CliContainer) Exists(key string) bool {
+	if _, ok := c.container[key]; ok {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (c *CliContainer) AllHostName() []string {
@@ -213,7 +253,6 @@ func DiscoverClient(container *CliContainer, port int) {
 	buf := make([]byte, 1024)
 
 	for {
-		// 读取 UDP 数据包
 		n, srcAddr, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			fmt.Println("Error reading from UDP:", err)
@@ -230,4 +269,18 @@ func AllHostName() []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func DetailedInfo(keys []string) ([]Client, time.Time, error) {
+	cliList := make([]Client, len(keys), len(keys))
+
+	t := time.Now()
+
+	for i, name := range keys {
+		if container.Exists(name) {
+			cliList[i] = *container.container[name]
+		}
+	}
+
+	return cliList, t, nil
 }

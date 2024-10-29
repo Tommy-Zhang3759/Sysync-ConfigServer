@@ -66,16 +66,39 @@ func Handler(w http.ResponseWriter, r *http.Request, q url.Values) {
 }
 
 func cliInfo(w http.ResponseWriter, r *http.Request) {
-	names := clientManage.AllHostName() // 假设这是 []string 类型
+	/*
+	* return a list containing all host names if no arguments are included
+	* otherwise, return detailed information
+	 */
 
-	// 将 names 编码为 JSON 格式
-	responseData, err := json.Marshal(names)
+	var responseData []byte
+	var err error
+
+	names := clientManage.AllHostName()
+
+	idList := r.URL.Query()["id"]
+
+	if idList != nil && len(idList) > 0 {
+		oriInfo, _, _ := clientManage.DetailedInfo(idList)
+
+		var friendly []clientManage.FriendlyClient
+
+		for i := range oriInfo {
+			f, _ := oriInfo[i].HumanFriendly()
+			friendly = append(friendly, f)
+		}
+
+		responseData, err = json.Marshal(friendly)
+
+	} else {
+		responseData, err = json.Marshal(names)
+	}
+
 	if err != nil {
 		http.Error(w, "Failed to encode response data", http.StatusInternalServerError)
 		return
 	}
 
-	// 设置响应头为 JSON 格式，并写入数据
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(responseData)
