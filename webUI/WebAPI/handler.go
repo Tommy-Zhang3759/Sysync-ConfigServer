@@ -74,8 +74,6 @@ func cliInfo(w http.ResponseWriter, r *http.Request) {
 	var responseData []byte
 	var err error
 
-	names := clientManage.AllHostName()
-
 	idList := r.URL.Query()["id"]
 
 	if idList != nil && len(idList) > 0 {
@@ -91,7 +89,7 @@ func cliInfo(w http.ResponseWriter, r *http.Request) {
 		responseData, err = json.Marshal(friendly)
 
 	} else {
-		responseData, err = json.Marshal(names)
+		responseData, err = json.Marshal(clientManage.AllHostName())
 	}
 
 	if err != nil {
