@@ -1,3 +1,12 @@
+function checkType(variable, name, type = 'string') {
+    if (typeof variable !== type) {
+        throw new TypeError(`${name} must be a ${type}`);
+    }
+}
+
+
+
+
 async function loadClients() {
     try {
         const response = await fetch('/api/cliInfo');
@@ -33,7 +42,7 @@ async function clientDetailedMenu(hostname) {
         <p>Host name: ${c.host_name}</p>
         <p>IP: ${c.ip_addr}</p>
         <p>状态: ${paddedStatusCode}</p>
-        <button onclick="performAction('${c.id}')">操作</button>
+        <button onclick="syncSettings(null, '${c.ip_addr}', null, null, null)">Syncing System Configrations</button>
     `;
 }
 
@@ -46,20 +55,32 @@ async function requestClientInfo(clientId) {
 }
 
 // 模拟操作客户端的功能
-function performAction(clientId) {
-    alert(`正在对客户端ID ${clientId} 执行操作`);
-    fetch('/api/perform_action', {
+function syncSettings(destSysyncId, destIpAddr, destPort, server_ip_addr, server_port) {
+    if (!Array.isArray(destSysyncId) || !destSysyncId.length) {
+        destSysyncId = [destSysyncId];
+    }
+    if (!Array.isArray(destIpAddr) || !destIpAddr.length) {
+        destIpAddr = [destIpAddr];
+    }
+    fetch('/api/func', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ id: clientId })
+        body: JSON.stringify({
+            dest_sysync_id: destSysyncId,
+            f_name: "update_host_name",
+            dest_ip: destIpAddr,
+            dest_port: destPort,
+            host_ip: server_ip_addr,
+            host_port: server_port
+        })
     })
         .then(response => response.json())
         .then(data => {
-            console.log('操作成功:', data);
+            console.log('Request sent:', data);
         })
-        .catch(error => console.error('执行操作时出错:', error));
+        .catch(error => console.error('Error while sending:', error));
 }
 
 function addLog(logMessage) {
@@ -80,3 +101,4 @@ function updateSystemStatus() {
 }
 
 loadClients()
+requestClientInfo('STU01')

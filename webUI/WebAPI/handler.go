@@ -1,13 +1,10 @@
 package WebAPI
 
 import (
-	"ConfigServer/APIGateway"
 	"ConfigServer/clientManage"
-	"ConfigServer/utils"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -104,103 +101,6 @@ func cliInfo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 		return
 	}
-}
-
-func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
-	bodyJson, _ := utils.JsonDecode(*body)
-
-	var destStrings []string
-	if dest, ok := bodyJson["dest_ip"].([]interface{}); ok {
-		for _, v := range dest {
-			if str, ok := v.(string); ok {
-				destStrings = append(destStrings, str)
-			}
-		}
-	} else {
-		destStrings = append(destStrings, "0.0.0.0")
-	}
-
-	var addrs []net.UDPAddr
-	for _, ip := range destStrings {
-		addr, err := utils.ParseUDPAddr(ip, bodyJson["dest_port"].(string))
-		if err != nil {
-			fmt.Println("Error parsing address:", err)
-			continue
-		}
-		addrs = append(addrs, addr)
-	}
-
-	switch bodyJson["f_name"] {
-	case "update_host_name":
-
-		sender := APIGateway.MessSending{
-			Dest: addrs,
-			MessContent: map[string]interface{}{
-				"f_name":    "update_host_name",
-				"host_ip":   bodyJson["host_ip"].(string),
-				"host_port": clientManage.UdpHostPort,
-				//"host_port": bodyJson["host_port"].(string),
-			},
-		}
-
-		nameServer := APIGateway.HostNameReq{}
-		nameServer.SetKeyWord("host_name_req")
-
-		//t := clientManage.Schedule{
-		//	ExecTime: time.Time{},
-		//	Do: func() error {
-		//		err := sender.Run()
-		//		return err
-		//	},
-		//}
-		_ = sender.Run()
-
-		addErr := clientManage.CliUdpApiGateway.Add(&nameServer)
-		if addErr == nil {
-			_ = nameServer.Run()
-		}
-
-		//t2 := clientManage.Schedule{
-		//	ExecTime: time.Time{},
-		//	Do: func() error {
-		//		err := sender.Run()
-		//		return err
-		//	},
-		//}
-
-	case "send_command_to_host":
-
-		sender := APIGateway.MessSending{
-			Dest: addrs,
-			MessContent: map[string]interface{}{
-				"f_name":  "run_command",
-				"command": bodyJson["command"].(string),
-			},
-		}
-
-		//commandServer := APIGateway.CommandReq{}
-		//commandServer.SetKeyWord("command_req")
-		//
-		_ = sender.Run()
-		//
-		//addErr := clientManage.CliUdpApiGateway.Add(&commandServer)
-		//if addErr == nil {
-		//	_ = commandServer.Run()
-		//}
-		//
-		//
-	case "set_server_info":
-		sender := APIGateway.MessSending{
-			Dest: addrs,
-			MessContent: map[string]interface{}{
-				"f_name":      "set_server_info",
-				"server_ip":   bodyJson["server_ip"].(string),
-				"server_port": bodyJson["server_port"].(int),
-			},
-		}
-		_ = sender.Run()
-	}
-
 }
 
 func command(w http.ResponseWriter, r *http.Request, body *[]byte) {

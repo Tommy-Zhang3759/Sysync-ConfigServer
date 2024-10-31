@@ -100,7 +100,7 @@ func (h *SendCommandToHost) Run() error {
 type MessSending struct {
 	UDPAPIPortTemp
 	Dest        []net.UDPAddr
-	MessContent map[string]interface{}
+	MessContent interface{}
 }
 
 func (m *MessSending) name() {
