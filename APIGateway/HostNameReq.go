@@ -17,7 +17,7 @@ func (u *HostNameReq) Run() error {
 
 	var db DataFrame.DataFrame = &DataFrame.SQLite{}
 
-	err := db.Connect("../data/clientInfo.db")
+	err := db.Connect("data/clientInfo.db")
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

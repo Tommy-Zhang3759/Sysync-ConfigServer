@@ -71,14 +71,44 @@ func (u *UDPAPIPortTemp) Run() error { // a template to write APIs' definition
 }
 
 type UDPAPIGateway struct { // listen api calls on a specific port
-	portList map[string]UDPAPIPort // pointer point to a real port structure
-	Port     int
-	statCode int
+	portList     map[string]UDPAPIPort // pointer point to a real port structure
+	Port         int
+	statCode     int
+	netInterface net.Interface
 
 	udpListener *net.UDPConn
 
 	endRun chan bool
 	inited bool
+}
+
+func (a *UDPAPIGateway) getIPInfo(interfaceName string) ([]net.IP, error) {
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	// 遍历所有接口，查找匹配的接口
+	for _, iface := range interfaces {
+		if iface.Name == interfaceName {
+			// 获取该接口的地址
+			addrs, err := iface.Addrs()
+			if err != nil {
+				return nil, err
+			}
+
+			// 收集有效的 IP 地址
+			var ips []net.IP
+			for _, addr := range addrs {
+				if ipNet, ok := addr.(*net.IPNet); ok {
+					ips = append(ips, ipNet.IP)
+				}
+			}
+			return ips, nil
+		}
+	}
+
+	return nil, fmt.Errorf("interface %s not found", interfaceName)
 }
 
 func (a *UDPAPIGateway) SendMess(mess []byte, destIPs ...net.UDPAddr) error {

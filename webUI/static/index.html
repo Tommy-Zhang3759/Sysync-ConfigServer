@@ -3,45 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Interface</title>
+    <title>系统管理页面</title>
+    <link rel="stylesheet" href="index.css">
 </head>
-<body style="background-color: #000000">
-<header>
-    <h1>Interactive Interface</h1>
-    <div id="headRight">
-        <button id="executeButton" onclick="submitCodeFile()">Execute</button>
+<body>
+
+    <!-- 顶栏：显示系统状态 -->
+    <div id="top-bar">
+        系统状态：<span id="system-status">正常</span>
     </div>
 
-</header>
-<main>
-    <script>
-        async function submitCodeFile(){
-            const res = await fetch(`/api/func`, {
-                method: 'POST',
-                credentials: 'include', // automatically insert cookies
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json' // 确保服务器知道你发送的是 JSON
-                },
-                body: JSON.stringify({ // 将对象转换为紧凑的 JSON 字符串
-                    "f_name": "update_host_name",
-                    "dest_ip": ["127.0.0.1"],
-                    "dest_port": "6003",
-                    "host_ip": "127.0.0.1",
-                    "host_port": "6004"
-                }) // 没有传入第三个参数，这样 JSON 就是紧凑格式
-            });
+    <div id="main">
+        <!-- 左侧栏：客户端列表 -->
+        <div id="left-bar">
+            <h3>客户端列表</h3>
+            <div id="client-list">
+                <!-- 动态加载客户端 -->
+            </div>
+        </div>
 
-            if (!res.ok) { //slow connection
-                throw new Error('Network response was not ok ' + res.statusText);
-            }
+        <!-- 中间区域：选中客户端的详细信息 -->
+        <div id="right-content">
+            <div id="client-info">
+                <h3>客户端信息</h3>
+                <div id="client-details">请选择一个客户端以查看详情</div>
+            </div>
 
-            const reqData = await res.json(); // 将响应解析为JSON
+            <!-- 下边栏：服务器日志 -->
+            <div id="log-bar">
+                <h3>服务器日志</h3>
+                <div id="log-content">
+                    <!-- 动态加载日志 -->
+                </div>
+            </div>
+        </div>
+    </div>
 
-            console.log("taskOBJ Init:" + JSON.stringify(reqData));
-        }
-    </script>
-</main>
-
+    <script src="index.js"></script>
 </body>
 </html>

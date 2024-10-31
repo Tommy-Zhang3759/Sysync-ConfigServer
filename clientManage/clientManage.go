@@ -1,54 +1,235 @@
 package clientManage
 
 import (
+	"ConfigServer/APIGateway"
+	DataFrame "ConfigServer/utils/database"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/hex"
 	"fmt"
-	"math/rand"
 	"net"
+	"sort"
+	"time"
 )
 
-type Client struct {
-	addr   net.Addr
-	conn   *net.Conn
-	mac    net.HardwareAddr
-	status int // stat code
-	id     string
+var container *CliContainer = nil
+
+func Init(dbPath string) {
+	container = NewCliContainer(dbPath)
+	container.Init(dbPath)
+
+	CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpClientPort)
+	CliUdpApiGateway.Init()
 }
 
-func NewClient(addr net.Addr, conn *net.Conn, mac net.HardwareAddr) Client {
-	var c = Client{
-		addr: addr,
-		conn: conn,
-		mac:  mac,
+type Client struct {
+	HostName   string           `json:"host_name"`
+	IpAddr     net.Addr         `json:"ip_addr"`
+	MacAddr    net.HardwareAddr `json:"mac_addr"`
+	StatusCode int              `json:"status_code"`
+	OsVersion  string           `json:"os_version"`
+	ProductId  string           `json:"product_id"`
+	SysyncId   [32]byte         `json:"sysync_id"`
+
+	conn   *net.Conn
+	caught bool
+}
+
+func NewClient(
+	hostName string,
+	ipAddr net.Addr,
+	macAddr net.HardwareAddr,
+	statusCode int,
+	osVersion string,
+	productId string,
+) *Client {
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	rand := make([]byte, 40)
+
+	// 将字节映射到 letters 字符串中
+	for i := range rand {
+		rand[i] = letters[rand[i]%byte(len(letters))]
 	}
-	_ = c.creatID()
-	c.status = 000
-	return c
+
+	sysyncId := sha256.Sum256(append([]byte(macAddr.String()+productId), rand...))
+
+	return &Client{
+		HostName:   hostName,
+		IpAddr:     ipAddr,
+		MacAddr:    macAddr,
+		StatusCode: statusCode,
+		OsVersion:  osVersion,
+		ProductId:  productId,
+		SysyncId:   sysyncId,
+	}
 }
 
 func (c *Client) logIn() {
-	c.status = 500
+	c.updateStatusCode(500)
 }
 
 func (c *Client) logOut() {
-	c.status = 200
+	c.updateStatusCode(200)
 }
 
-func (c *Client) creatID() error {
-	c.id = (string)(rune(rand.Int()))
-	return nil
+func (c *Client) updateStatusCode(a int) {
+	c.StatusCode = a
+}
+
+type FriendlyClient struct {
+	HostName   string `json:"host_name"`
+	IpAddr     string `json:"ip_addr"`
+	MacAddr    string `json:"mac_addr"`
+	StatusCode int    `json:"status_code"`
+	OsVersion  string `json:"os_version"`
+	ProductId  string `json:"product_id"`
+	SysyncId   string `json:"sysync_id"`
+}
+
+// HumanFriendly converts a Client struct to a human-friendly JSON format.
+func (c *Client) HumanFriendly() (FriendlyClient, error) {
+	friendly := FriendlyClient{
+		HostName:   c.HostName,
+		IpAddr:     c.IpAddr.String(),
+		MacAddr:    c.MacAddr.String(),
+		StatusCode: c.StatusCode,
+		OsVersion:  c.OsVersion,
+		ProductId:  c.ProductId,
+		SysyncId:   hex.EncodeToString(c.SysyncId[:]),
+	}
+
+	return friendly, nil
 }
 
 type CliContainer struct {
-	CliContainer map[string]Client //id as key
+	container map[string]*Client //id as key
+	dbPath    string
+	db        *DataFrame.SQLite
+
+	initiated bool
 }
 
-func (receiver CliContainer) Find(key string) Client {
-	return receiver.CliContainer[key]
+func NewCliContainer(dbPath string) *CliContainer {
+	return &CliContainer{
+		container: make(map[string]*Client),
+		initiated: false,
+		dbPath:    dbPath,
+	}
 }
 
-func (receiver CliContainer) New(c Client) error {
-	receiver.CliContainer[c.id] = c
+func (c *CliContainer) Init(dbPath string) error {
+	db := &DataFrame.SQLite{}
+	err := db.Connect(dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to connect to database")
+	}
+	//defer func(db *DataFrame.SQLite) {
+	//	_ = db.Close()
+	//}(db)
+
+	err = c.loadClientsFromDB(db)
+	if err != nil {
+		return fmt.Errorf("failed to load from database for initiation: %e", err)
+	}
+	c.initiated = true
 	return nil
+}
+
+func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
+	query := `SELECT host_name, IP_address, MAC_address, status_code, OS_version, product_ID, sysync_ID FROM win_cli`
+	rows, err := db.Query(query)
+	if err != nil {
+		return fmt.Errorf("failed to query database: %v", err)
+	}
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	for rows.Next() {
+		var hostName, ipAddrStr, macAddrStr, osVersion, productId string
+		var statusCode int
+		var sysyncId []byte
+
+		if err = rows.Scan(&hostName, &ipAddrStr, &macAddrStr, &statusCode, &osVersion, &productId, &sysyncId); err != nil {
+			return fmt.Errorf("failed to scan row: %v", err)
+		}
+
+		// 解析 IP 和 MAC 地址
+		ipAddr := net.ParseIP(ipAddrStr)
+		macAddr, err := net.ParseMAC(macAddrStr)
+		if err != nil {
+			return fmt.Errorf("invalid MAC address: %v", err)
+		}
+
+		// 创建 Client 实例并添加到容器
+		client := &Client{
+			HostName:   hostName,
+			IpAddr:     &net.IPAddr{IP: ipAddr},
+			MacAddr:    macAddr,
+			StatusCode: statusCode,
+			OsVersion:  osVersion,
+			ProductId:  productId,
+			SysyncId:   [32]byte(sysyncId),
+		}
+
+		c.Push(client)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error reading rows: %v", err)
+	}
+
+	return nil
+}
+
+func (c *CliContainer) Push(cli *Client) error {
+	c.container[cli.HostName] = cli
+	return nil
+}
+
+func (c *CliContainer) Delete(key string) error {
+	if c.Exists(key) {
+		c.container[key] = nil
+		delete(c.container, key)
+		return nil
+	} else {
+		return fmt.Errorf("key not found")
+	}
+}
+
+func (c *CliContainer) Pop(key string) (*Client, error) {
+	if c.Exists(key) {
+		cli := c.container[key]
+		delete(c.container, key)
+		return cli, nil
+	} else {
+		return nil, fmt.Errorf("host name dose not exists")
+	}
+}
+
+func (c *CliContainer) Get(key string) (*Client, error) {
+	if c.Exists(key) {
+		cli := c.container[key]
+		return cli, nil
+	} else {
+		return nil, fmt.Errorf("host name dose not exists")
+	}
+}
+
+func (c *CliContainer) Exists(key string) bool {
+	if _, ok := c.container[key]; ok {
+		return true
+	} else {
+		return false
+	}
+}
+
+func (c *CliContainer) AllHostName() []string {
+	keys := make([]string, 0, len(c.container))
+	for k := range c.container {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func DiscoverClient(container *CliContainer, port int) {
@@ -72,7 +253,6 @@ func DiscoverClient(container *CliContainer, port int) {
 	buf := make([]byte, 1024)
 
 	for {
-		// 读取 UDP 数据包
 		n, srcAddr, err := conn.ReadFromUDP(buf)
 		if err != nil {
 			fmt.Println("Error reading from UDP:", err)
@@ -80,4 +260,27 @@ func DiscoverClient(container *CliContainer, port int) {
 		}
 		fmt.Printf("Received UDP broadcast from %s: %s\n", srcAddr, string(buf[:n]))
 	}
+}
+
+func AllHostName() []string {
+	keys := make([]string, 0, len(container.container))
+	for k := range container.container {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func DetailedInfo(keys []string) ([]Client, time.Time, error) {
+	cliList := make([]Client, len(keys), len(keys))
+
+	t := time.Now()
+
+	for i, name := range keys {
+		if container.Exists(name) {
+			cliList[i] = *container.container[name]
+		}
+	}
+
+	return cliList, t, nil
 }
