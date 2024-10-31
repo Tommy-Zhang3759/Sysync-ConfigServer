@@ -2,7 +2,7 @@ package clientManage
 
 import (
 	"ConfigServer/APIGateway"
-	DataFrame "ConfigServer/utils/dataFrame"
+	DataFrame "ConfigServer/utils/database"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"

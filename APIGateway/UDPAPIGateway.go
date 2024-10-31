@@ -79,6 +79,7 @@ type UDPAPIGateway struct { // listen api calls on a specific port
 	udpListener *net.UDPConn
 
 	endRun chan bool
+	inited bool
 }
 
 func (a *UDPAPIGateway) getIPInfo(interfaceName string) ([]net.IP, error) {
@@ -142,6 +143,7 @@ func (a *UDPAPIGateway) Init() error {
 		return err
 	}
 	a.udpListener = conn
+	a.inited = true
 	return nil
 }
 
@@ -165,6 +167,10 @@ func (a *UDPAPIGateway) Run() error {
 				messJson, jsonErr := utils.JsonDecode(buffer)
 				if jsonErr != nil {
 					fmt.Println("Error decoding form UDP API message:", jsonErr.Error())
+				}
+
+				if b := messJson["f_name"] == nil; b {
+					_ = a.SendMess([]byte("{\"error\":\"invalid key\"}"))
 				}
 
 				a.portList[messJson["f_name"].(string)].NewMess(UDPMessage{
