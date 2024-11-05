@@ -74,6 +74,11 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			}
 		}
 
+		if len(adders) == 0 {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		sender := APIGateway.MessSending{
 			Dest: adders,
 			MessContent: UpdateHostNameRequest{
