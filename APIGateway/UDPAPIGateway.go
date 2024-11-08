@@ -72,14 +72,32 @@ func (u *UDPAPIPortTemp) Run() error { // a template to write APIs' definition
 
 type UDPAPIGateway struct { // listen api calls on a specific port
 	portList     map[string]UDPAPIPort // pointer point to a real port structure
-	Port         int
+	port         int
+	ip           string
 	statCode     int
 	netInterface net.Interface
 
 	udpListener *net.UDPConn
 
-	endRun chan bool
-	inited bool
+	endRun    chan bool
+	initiated bool
+}
+
+func NewUDPAPIGateway(port int, ip string) *UDPAPIGateway {
+	return &UDPAPIGateway{
+		portList: make(map[string]UDPAPIPort),
+		port:     port,
+		ip:       ip,
+		statCode: 000,
+	}
+}
+
+func (a *UDPAPIGateway) Port() int {
+	return a.port
+}
+
+func (a *UDPAPIGateway) IP() string {
+	return a.ip
 }
 
 func (a *UDPAPIGateway) getIPInfo(interfaceName string) ([]net.IP, error) {
@@ -132,8 +150,8 @@ func (a *UDPAPIGateway) SendMess(mess []byte, destIPs ...net.UDPAddr) error {
 
 func (a *UDPAPIGateway) Init() error {
 	addr := net.UDPAddr{
-		Port: a.Port,
-		IP:   net.ParseIP("0.0.0.0"),
+		Port: a.port,
+		IP:   net.ParseIP(a.ip),
 	}
 
 	conn, err := net.ListenUDP("udp", &addr)
@@ -143,7 +161,7 @@ func (a *UDPAPIGateway) Init() error {
 		return err
 	}
 	a.udpListener = conn
-	a.inited = true
+	a.initiated = true
 	return nil
 }
 
