@@ -56,7 +56,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 
 		var destPort int
 		if requestData.DestPort == 0 { // got null in json
-			destPort = clientManage.UdpHostPort
+			destPort = clientManage.UdpClientPort
 		} else {
 			destPort = requestData.DestPort
 		}
@@ -74,6 +74,10 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			}
 		}
 
+		if requestData.HostIP == "" {
+			requestData.HostIP = clientManage.CliUdpApiGateway.IP()
+		}
+
 		if len(adders) == 0 {
 			w.WriteHeader(http.StatusBadRequest)
 			return
@@ -84,7 +88,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			MessContent: UpdateHostNameRequest{
 				FName:    "update_host_name",
 				HostIP:   requestData.HostIP,
-				HostPort: clientManage.CliUdpApiGateway.Port,
+				HostPort: clientManage.CliUdpApiGateway.Port(),
 			},
 		}
 

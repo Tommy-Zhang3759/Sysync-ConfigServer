@@ -17,8 +17,8 @@ var container *CliContainer = nil
 func Init(dbPath string) {
 	container = NewCliContainer(dbPath)
 	container.Init(dbPath)
-
-	CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpClientPort)
+	// TODO: support identify the server ip that is under the same net range as clients
+	CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort, "0.0.0.0")
 	CliUdpApiGateway.Init()
 }
 

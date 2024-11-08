@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-var gateway = NewUDPAPIGateway(6004)
+var gateway = NewUDPAPIGateway(6004, "0.0.0.0")
 
 func TestHostNameReq_Run(t *testing.T) {
 	p := HostNameReq{}
