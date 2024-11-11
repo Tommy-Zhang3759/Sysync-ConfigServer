@@ -1,12 +1,13 @@
-package APIGateway
+package APIWorkers
 
 import (
+	"ConfigServer/APIGateway"
 	"encoding/json"
 	"net"
 )
 
 type MessSending struct {
-	UDPAPIPortTemp
+	APIGateway.UDPAPIPortTemp
 	Dest        []net.UDPAddr
 	MessContent interface{}
 }

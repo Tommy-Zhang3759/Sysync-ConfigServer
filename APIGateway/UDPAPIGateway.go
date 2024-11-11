@@ -12,20 +12,20 @@ type UDPMessage struct {
 }
 
 type UDPAPIPortTemp struct {
-	keyWord    string
-	messageQue *utils.Queue
+	KeyWord    string
+	MessageQue *utils.Queue
 	Gateway    *UDPAPIGateway
 
-	endRun chan bool
+	EndRun chan bool
 }
 
 func (u *UDPAPIPortTemp) SetKeyWord(key string) {
-	u.keyWord = key
+	u.KeyWord = key
 	return
 }
 
 func (u *UDPAPIPortTemp) GetKeyWord() string {
-	return u.keyWord
+	return u.KeyWord
 }
 
 func (u *UDPAPIPortTemp) Start() error {
@@ -36,27 +36,27 @@ func (u *UDPAPIPortTemp) Start() error {
 }
 
 func (u *UDPAPIPortTemp) Stop() error {
-	u.endRun <- true
+	u.EndRun <- true
 	return nil
 }
 
 func (u *UDPAPIPortTemp) NewMess(mess UDPMessage) {
-	u.messageQue.Append(mess)
+	u.MessageQue.Append(mess)
 }
 
 func (u *UDPAPIPortTemp) Init(gateway *UDPAPIGateway) {
 	u.Gateway = gateway
-	u.messageQue = utils.NewQueue()
+	u.MessageQue = utils.NewQueue()
 }
 
 func (u *UDPAPIPortTemp) Run() error { // a template to write APIs' definition
 	stop := false
 
 	for stop == false {
-		reqPack := u.messageQue.Pop().(UDPMessage)
+		reqPack := u.MessageQue.Pop().(UDPMessage)
 
 		select {
-		case <-u.endRun:
+		case <-u.EndRun:
 			fmt.Println("Received stop signal, goroutine exiting...")
 			stop = true
 		default:
@@ -238,4 +238,11 @@ func (a *UDPAPIGateway) Remove(keyWord string) error {
 		return fmt.Errorf("port %s not exists", keyWord)
 	}
 	return nil
+}
+
+type ApiResponse struct {
+	Fname   string `json:"f_name"`
+	Status  int    `json:"status"`
+	Message string `json:"message,omitempty"`
+	Error   string `json:"error,omitempty"`
 }

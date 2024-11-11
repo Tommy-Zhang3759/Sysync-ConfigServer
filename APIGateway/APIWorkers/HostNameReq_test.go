@@ -1,15 +1,15 @@
-package APIGateway
+package APIWorkers
 
 import (
+	"ConfigServer/APIGateway"
 	"net"
 	"testing"
 )
 
-var gateway = NewUDPAPIGateway(6004, "0.0.0.0")
-
 func TestHostNameReq_Run(t *testing.T) {
+	var gateway = APIGateway.NewUDPAPIGateway(6004, "0.0.0.0")
 	p := HostNameReq{}
-	p.keyWord = "key"
+	p.KeyWord = "key"
 
 	_ = gateway.Init()
 

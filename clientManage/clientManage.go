@@ -35,7 +35,7 @@ type Client struct {
 	caught bool
 }
 
-func NewClient(
+func CreateNewClientInfo(
 	hostName string,
 	ipAddr net.Addr,
 	macAddr net.HardwareAddr,

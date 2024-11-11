@@ -1,7 +1,7 @@
 package WebAPI
 
 import (
-	"ConfigServer/APIGateway"
+	"ConfigServer/APIGateway/APIWorkers"
 	"ConfigServer/clientManage"
 	"encoding/json"
 	"net"
@@ -83,7 +83,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			return
 		}
 
-		sender := APIGateway.MessSending{
+		sender := APIWorkers.MessSending{
 			Dest: adders,
 			MessContent: UpdateHostNameRequest{
 				FName:    "update_host_name",
@@ -92,7 +92,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			},
 		}
 
-		nameServer := APIGateway.HostNameReq{}
+		nameServer := APIWorkers.HostNameReq{}
 		nameServer.SetKeyWord("host_name_req")
 
 		//t := clientManage.Schedule{

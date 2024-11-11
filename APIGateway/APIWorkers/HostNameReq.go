@@ -1,6 +1,7 @@
-package APIGateway
+package APIWorkers
 
 import (
+	"ConfigServer/APIGateway"
 	DataFrame "ConfigServer/utils/database"
 	"database/sql"
 	"encoding/json"
@@ -9,7 +10,7 @@ import (
 )
 
 type HostNameReq struct {
-	UDPAPIPortTemp
+	APIGateway.UDPAPIPortTemp
 }
 
 func (u *HostNameReq) Run() error {
@@ -28,10 +29,10 @@ func (u *HostNameReq) Run() error {
 	}()
 
 	for stop == false {
-		reqPack := u.messageQue.Pop().(UDPMessage)
+		reqPack := u.MessageQue.Pop().(APIGateway.UDPMessage)
 
 		select {
-		case <-u.endRun:
+		case <-u.EndRun:
 			fmt.Println("Received stop signal, goroutine exiting...")
 			stop = true
 		default:
@@ -92,5 +93,3 @@ func (u *HostNameReq) Run() error {
 	}
 	return nil
 }
-
-//---------------------------------------------------------------------------------------

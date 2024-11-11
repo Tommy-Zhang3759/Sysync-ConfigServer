@@ -1,7 +1,9 @@
-package APIGateway
+package APIWorkers
+
+import "ConfigServer/APIGateway"
 
 type SendCommandToHost struct {
-	UDPAPIPortTemp
+	APIGateway.UDPAPIPortTemp
 }
 
 func (h *SendCommandToHost) Run() error {
