@@ -1,24 +1,25 @@
 package APIWorkers
 
 import (
-	"ConfigServer/APIGateway"
+	"ConfigServer/clientManage"
 	"encoding/json"
 	"net"
 	"testing"
 	"time"
 )
 
-func TestSearchNewClient_Run_Run(t *testing.T) {
-	var gateway = APIGateway.NewUDPAPIGateway(6004, "0.0.0.0")
-	p := SearchNewClient{}
-	p.KeyWord = "key"
-
-	_ = gateway.Init()
+func TestSearchNewClient_Run(t *testing.T) {
+	clientManage.Init("../../data/clientInfo.db")
+	p := ConnNewClient{
+		cliContainer: clientManage.Container,
+	}
+	p.SetKeyWord("key")
+	clientManage.CliUdpApiGateway.Add(&p)
 
 	go func() {
-		_ = gateway.Run()
+		_ = clientManage.CliUdpApiGateway.Run()
 	}()
-	_ = gateway.Add(&p)
+
 	go func() {
 		_ = p.Run()
 	}()
@@ -31,19 +32,20 @@ func TestSearchNewClient_Run_Run(t *testing.T) {
 		OSVersion string `json:"os_version"`
 		ProductID string `json:"product_id"`
 		HostName  string `json:"host_name"`
+		Status    int    `json:"status_code"`
 	}
 
 	var message []byte
 
 	message, _ = json.Marshal(Message{
 		FName:     "key",
-		Mac:       "11:11:11:11:11",
+		Mac:       "11:11:11:11:11:11",
 		OSVersion: "12345567",
 		ProductID: "09876",
 		HostName:  "TEST-HOST",
+		Status:    0,
 	})
 
-	// 定义本地的目标地址（本地 IP 地址 127.0.0.1 和端口 6004）
 	addr := &net.UDPAddr{
 		IP:   net.ParseIP("127.0.0.1"),
 		Port: 6004,
@@ -54,7 +56,10 @@ func TestSearchNewClient_Run_Run(t *testing.T) {
 		_ = conn.Close()
 	}(conn)
 
-	// 发送数据
 	_, _ = conn.Write(message)
+
+	for true {
+		time.Sleep(time.Second)
+	}
 
 }

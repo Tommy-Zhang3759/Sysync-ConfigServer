@@ -68,35 +68,29 @@ func cliInfo(w http.ResponseWriter, r *http.Request) {
 	* otherwise, return detailed information
 	 */
 
-	var responseData []byte
-	var err error
-
 	idList := r.URL.Query()["id"]
 
-	if idList != nil && len(idList) > 0 {
-		oriInfo, _, _ := clientManage.DetailedInfo(idList)
+	var rsp []byte
 
-		var friendly []clientManage.FriendlyClient
-
-		for i := range oriInfo {
-			f, _ := oriInfo[i].HumanFriendly()
-			friendly = append(friendly, f)
+	if len(idList) > 0 {
+		var clients = make([]clientManage.FriendlyClient, len(idList))
+		for i, id := range idList {
+			cli, err := clientManage.Get(id)
+			if err != nil {
+				clients[i] = clientManage.FriendlyClient{}
+				println(err.Error())
+			} else {
+				clients[i] = cli.HumanFriendly()
+			}
 		}
-
-		responseData, err = json.Marshal(friendly)
-
+		rsp, _ = json.Marshal(clients)
 	} else {
-		responseData, err = json.Marshal(clientManage.AllHostName())
-	}
-
-	if err != nil {
-		http.Error(w, "Failed to encode response data", http.StatusInternalServerError)
-		return
+		rsp, _ = json.Marshal(clientManage.AllHostName())
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_, err = w.Write(responseData)
+	_, err := w.Write(rsp)
 	if err != nil {
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 		return

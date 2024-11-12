@@ -2,6 +2,7 @@ package APIWorkers
 
 import (
 	"ConfigServer/APIGateway"
+	"ConfigServer/clientManage"
 	DataFrame "ConfigServer/utils/database"
 	"database/sql"
 	"encoding/json"
@@ -16,12 +17,7 @@ type HostNameReq struct {
 func (u *HostNameReq) Run() error {
 	stop := false
 
-	var db DataFrame.DataFrame = &DataFrame.SQLite{}
-
-	err := db.Connect("data/clientInfo.db")
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
+	var db DataFrame.DataFrame = clientManage.DataFrameConn()
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Fatalf("Failed to disconnect to database: %v", err)

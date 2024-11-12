@@ -2,21 +2,22 @@ package clientManage
 
 import (
 	"ConfigServer/APIGateway"
-	DataFrame "ConfigServer/utils/database"
+	"ConfigServer/utils/database"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"net"
+	"path/filepath"
 	"sort"
-	"time"
 )
 
-var container *CliContainer = nil
+var Container *CliContainer = nil
 
 func Init(dbPath string) {
-	container = NewCliContainer(dbPath)
-	container.Init(dbPath)
+	Container = NewCliContainer(dbPath)
+	Container.Init(dbPath)
 	// TODO: support identify the server ip that is under the same net range as clients
 	CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort, "0.0.0.0")
 	CliUdpApiGateway.Init()
@@ -24,7 +25,7 @@ func Init(dbPath string) {
 
 type Client struct {
 	HostName   string           `json:"host_name"`
-	IpAddr     net.Addr         `json:"ip_addr"`
+	IpAddr     net.IP           `json:"ip_addr"`
 	MacAddr    net.HardwareAddr `json:"mac_addr"`
 	StatusCode int              `json:"status_code"`
 	OsVersion  string           `json:"os_version"`
@@ -37,7 +38,7 @@ type Client struct {
 
 func CreateNewClientInfo(
 	hostName string,
-	ipAddr net.Addr,
+	ipAddr net.IP,
 	macAddr net.HardwareAddr,
 	statusCode int,
 	osVersion string,
@@ -87,7 +88,7 @@ type FriendlyClient struct {
 }
 
 // HumanFriendly converts a Client struct to a human-friendly JSON format.
-func (c *Client) HumanFriendly() (FriendlyClient, error) {
+func (c *Client) HumanFriendly() FriendlyClient {
 	friendly := FriendlyClient{
 		HostName:   c.HostName,
 		IpAddr:     c.IpAddr.String(),
@@ -98,7 +99,7 @@ func (c *Client) HumanFriendly() (FriendlyClient, error) {
 		SysyncId:   hex.EncodeToString(c.SysyncId[:]),
 	}
 
-	return friendly, nil
+	return friendly
 }
 
 type CliContainer struct {
@@ -118,21 +119,31 @@ func NewCliContainer(dbPath string) *CliContainer {
 }
 
 func (c *CliContainer) Init(dbPath string) error {
-	db := &DataFrame.SQLite{}
-	err := db.Connect(dbPath)
-	if err != nil {
-		return fmt.Errorf("failed to connect to database")
-	}
-	//defer func(db *DataFrame.SQLite) {
-	//	_ = db.Close()
-	//}(db)
+	c.db = &DataFrame.SQLite{}
+	err := c.db.Connect(dbPath)
 
-	err = c.loadClientsFromDB(db)
 	if err != nil {
-		return fmt.Errorf("failed to load from database for initiation: %e", err)
+		absDbPath, err := filepath.Abs(dbPath)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path of database: %v", err)
+		}
+		return fmt.Errorf("failed to connect to database at %s (absolute path: %s)", dbPath, absDbPath)
 	}
+
+	//err = c.loadClientsFromDB(db)
+	//if err != nil {
+	//	return fmt.Errorf("failed to load from database for initiation: %e", err)
+	//}
 	c.initiated = true
 	return nil
+}
+
+func (c *CliContainer) DataFrameConn() *DataFrame.SQLite {
+	return c.db
+}
+
+func DataFrameConn() *DataFrame.SQLite {
+	return Container.DataFrameConn()
 }
 
 func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
@@ -164,7 +175,7 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 		// 创建 Client 实例并添加到容器
 		client := &Client{
 			HostName:   hostName,
-			IpAddr:     &net.IPAddr{IP: ipAddr},
+			IpAddr:     ipAddr,
 			MacAddr:    macAddr,
 			StatusCode: statusCode,
 			OsVersion:  osVersion,
@@ -183,45 +194,130 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 }
 
 func (c *CliContainer) Push(cli *Client) error {
+	query := "INSERT INTO win_cli (host_name, IP_address, MAC_address, status_code, OS_version, product_ID, sysync_ID) VALUES (?, ?, ?, ?, ?, ?, ?)"
+
+	sysyncIdStr := hex.EncodeToString(cli.SysyncId[:]) // 将字节数组转换为十六进制字符串
+
+	_, err := c.db.Insert(query, cli.HostName, cli.IpAddr.String(), cli.MacAddr.String(), 000, cli.OsVersion, cli.ProductId, sysyncIdStr)
+	if err != nil {
+		return fmt.Errorf("failed to insert row: %v", err)
+	}
 	c.container[cli.HostName] = cli
 	return nil
 }
 
-func (c *CliContainer) Delete(key string) error {
-	if c.Exists(key) {
-		c.container[key] = nil
-		delete(c.container, key)
-		return nil
-	} else {
-		return fmt.Errorf("key not found")
+func Push(cli *Client) error {
+	return Container.Push(cli)
+}
+
+func (c *CliContainer) Delete(sysyncID string) error {
+	query := "DELETE FROM win_cli WHERE sysync_ID = ?"
+	_, err := c.db.Query(query, sysyncID)
+	if err != nil {
+		return fmt.Errorf("failed to delete rows: %v", err)
 	}
+	return nil
 }
 
 func (c *CliContainer) Pop(key string) (*Client, error) {
-	if c.Exists(key) {
+
+	if existed, err := c.Exists(key); existed && err == nil {
 		cli := c.container[key]
 		delete(c.container, key)
 		return cli, nil
+	} else if err != nil {
+		return nil, err
 	} else {
 		return nil, fmt.Errorf("host name dose not exists")
 	}
 }
 
-func (c *CliContainer) Get(key string) (*Client, error) {
-	if c.Exists(key) {
-		cli := c.container[key]
-		return cli, nil
+func (c *CliContainer) Get(sysyncID string) (*Client, error) {
+	if !c.initiated {
+		return nil, fmt.Errorf("call the container before initiate")
+	}
+
+	query := "SELECT host_name, IP_address, MAC_address, status_code, OS_version, product_ID FROM win_cli WHERE sysync_ID = ? "
+	rows, err := c.db.Query(query, sysyncID)
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+	if err != nil {
+		log.Fatalf("Failed to query win_cli: %v", err)
+	}
+
+	if rows.Next() {
+		var hostName, ipAddrStr, macAddrStr, statCode, osVersion string
+		var productId []byte
+		if err := rows.Scan(&hostName, &ipAddrStr, &macAddrStr, &statCode, &osVersion, &productId); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		if rows.Next() {
+			return nil, fmt.Errorf("sysync ID is duplicated")
+		}
+
+		macAddr, err := net.ParseMAC(macAddrStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid MAC address: %v", err)
+		}
+		return &Client{
+			HostName:   hostName,
+			IpAddr:     net.ParseIP(ipAddrStr),
+			MacAddr:    macAddr,
+			StatusCode: 0,
+			OsVersion:  "",
+			ProductId:  "",
+			SysyncId:   [32]byte{},
+			conn:       nil,
+			caught:     false,
+		}, nil
 	} else {
-		return nil, fmt.Errorf("host name dose not exists")
+		return nil, fmt.Errorf("sysync ID: %s dose not exists", sysyncID)
 	}
 }
 
-func (c *CliContainer) Exists(key string) bool {
-	if _, ok := c.container[key]; ok {
-		return true
-	} else {
-		return false
+func Get(sysyncID string) (*Client, error) {
+	return Container.Get(sysyncID)
+}
+
+func (c *CliContainer) MacExists(mac string) (bool, error) {
+	if !c.initiated {
+		return false, fmt.Errorf("call the container before initiate")
 	}
+
+	query := "SELECT host_name, IP_address, sysync_ID FROM win_cli WHERE MAC_address = ? "
+	rows, err := c.db.Query(query, mac)
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+	if err != nil {
+		log.Fatalf("Failed to query win_cli: %v", err)
+	}
+
+	if rows.Next() {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (c *CliContainer) Exists(sysyncID string) (bool, error) {
+	if !c.initiated {
+		return false, fmt.Errorf("call the container before initiate")
+	}
+
+	query := "SELECT host_name, IP_address, MAC_address FROM win_cli WHERE sysync_ID = ? "
+	rows, err := c.db.Query(query, sysyncID)
+	defer func(rows *sql.Rows) {
+		_ = rows.Close()
+	}(rows)
+	if err != nil {
+		log.Fatalf("Failed to query win_cli: %v", err)
+	}
+
+	if rows.Next() {
+		return true, nil
+	}
+	return false, nil
 }
 
 func (c *CliContainer) AllHostName() []string {
@@ -263,24 +359,10 @@ func DiscoverClient(container *CliContainer, port int) {
 }
 
 func AllHostName() []string {
-	keys := make([]string, 0, len(container.container))
-	for k := range container.container {
+	keys := make([]string, 0, len(Container.container))
+	for k := range Container.container {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-func DetailedInfo(keys []string) ([]Client, time.Time, error) {
-	cliList := make([]Client, len(keys), len(keys))
-
-	t := time.Now()
-
-	for i, name := range keys {
-		if container.Exists(name) {
-			cliList[i] = *container.container[name]
-		}
-	}
-
-	return cliList, t, nil
 }

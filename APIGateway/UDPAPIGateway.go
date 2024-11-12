@@ -12,7 +12,7 @@ type UDPMessage struct {
 }
 
 type UDPAPIPortTemp struct {
-	KeyWord    string
+	keyWord    string
 	MessageQue *utils.Queue
 	Gateway    *UDPAPIGateway
 
@@ -20,12 +20,12 @@ type UDPAPIPortTemp struct {
 }
 
 func (u *UDPAPIPortTemp) SetKeyWord(key string) {
-	u.KeyWord = key
+	u.keyWord = key
 	return
 }
 
 func (u *UDPAPIPortTemp) GetKeyWord() string {
-	return u.KeyWord
+	return u.keyWord
 }
 
 func (u *UDPAPIPortTemp) Start() error {
@@ -44,6 +44,7 @@ func (u *UDPAPIPortTemp) NewMess(mess UDPMessage) {
 	u.MessageQue.Append(mess)
 }
 
+// Init automatically called by gateway when it is added into
 func (u *UDPAPIPortTemp) Init(gateway *UDPAPIGateway) {
 	u.Gateway = gateway
 	u.MessageQue = utils.NewQueue()

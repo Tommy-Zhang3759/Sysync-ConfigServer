@@ -3,32 +3,32 @@ package APIWorkers
 import (
 	"ConfigServer/APIGateway"
 	"ConfigServer/clientManage"
-	DataFrame "ConfigServer/utils/database"
-	"database/sql"
+
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 )
 
-type SearchNewClient struct {
+type ConnNewClient struct {
 	APIGateway.UDPAPIPortTemp
+	cliContainer *clientManage.CliContainer
 }
 
-func (u *SearchNewClient) Run() error {
+func (u *ConnNewClient) Run() error {
 	stop := false
-
-	var db DataFrame.DataFrame = &DataFrame.SQLite{}
-
-	err := db.Connect("data/clientInfo.db")
-	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer func() {
-		if err = db.Close(); err != nil {
-			log.Fatalf("Failed to disconnect to database: %v", err)
-		}
-	}()
+	// TODO: use api for data reading
+	//var db DataFrame.DataFrame = &DataFrame.SQLite{}
+	//
+	//err := db.Connect("data/clientInfo.db")
+	//if err != nil {
+	//	log.Fatalf("Failed to connect to database: %v", err)
+	//}
+	//defer func() {
+	//	if err = db.Close(); err != nil {
+	//		log.Fatalf("Failed to disconnect to database: %v", err)
+	//	}
+	//}()
 
 	for stop == false {
 		reqPack := u.MessageQue.Pop().(APIGateway.UDPMessage)
@@ -54,44 +54,30 @@ func (u *SearchNewClient) Run() error {
 			}
 
 			var rsp rspTemp
-			rsp.Fname = u.KeyWord
+			rsp.Fname = u.GetKeyWord()
 
 			var hostname string = reqPack.Text["host_name"].(string)
-			var ip net.UDPAddr = reqPack.Addr
+			var ip net.IP = reqPack.Addr.IP
 			var mac, err = net.ParseMAC(reqPack.Text["mac"].(string))
 			var osVersion string = reqPack.Text["os_version"].(string)
 			var productID string = reqPack.Text["product_id"].(string)
-			var status = reqPack.Text["status_code"].(int)
+			var status = int(reqPack.Text["status_code"].(float64))
 			if err != nil {
 				rsp.Error = err.Error()
 				rsp.Status = -1
 			} else {
-				_ = clientManage.CreateNewClientInfo(
+				newCli := clientManage.CreateNewClientInfo(
 					hostname,
-					&ip,
+					ip,
 					mac,
 					status,
 					osVersion,
 					productID,
 				)
-				func() {
-					query := "SELECT host_name, IP_address, sysync_ID FROM win_cli WHERE MAC_address = ? "
-					rows, err := db.Query(query, mac)
-					defer func(rows *sql.Rows) {
-						_ = rows.Close()
-					}(rows)
-					if err != nil {
-						log.Fatalf("Failed to query win_cli: %v", err)
-					}
-
-					if rows.Next() {
-						var hostName, ipAddress string
-						var sysyncID []byte
-						_ = rows.Scan(&hostName, &ipAddress, sysyncID)
-						rsp.Status = -1
-						rsp.Error = "MAC already exists, logged under " + hostName + ipAddress
-					}
-				}()
+				err = clientManage.Push(newCli)
+				if err != nil {
+					log.Println(err)
+				}
 			}
 
 			rspJson, err := json.Marshal(rsp)
