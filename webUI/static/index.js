@@ -12,9 +12,9 @@ async function loadClients() {
         const response = await fetch('/api/cliInfo');
         const data = await response.json(); // 使用 await 解析 JSON
 
-        console.log(data); // 打印返回的数据
+        console.log(data);
         const clientList = document.getElementById('client-list');
-        clientList.innerHTML = ''; // 清空当前列表
+        clientList.innerHTML = '';
 
         if (data) {
             data.forEach(hostname => {
@@ -25,10 +25,10 @@ async function loadClients() {
                 div.onclick = () => clientDetailedMenu(hostname['sysync_id']);
             });
         } else {
-            console.error('返回的数据中没有 clients 字段');
+            console.error('No clients field in the returned data');
         }
     } catch (error) {
-        console.error('获取客户端列表时出错:', error);
+        console.error('Error getting client list:', error);
     }
 }
 
@@ -97,7 +97,7 @@ function updateSystemStatus() {
             const statusElement = document.getElementById('system-status');
             statusElement.innerText = status;
         })
-        .catch(error => console.error('更新系统状态时出错:', error));
+        .catch(error => console.error('Error updating system status:', error));
 }
 
 loadClients()
