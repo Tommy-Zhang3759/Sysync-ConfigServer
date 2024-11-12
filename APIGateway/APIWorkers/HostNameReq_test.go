@@ -9,7 +9,7 @@ import (
 func TestHostNameReq_Run(t *testing.T) {
 	var gateway = APIGateway.NewUDPAPIGateway(6004, "0.0.0.0")
 	p := HostNameReq{}
-	p.KeyWord = "key"
+	p.SetKeyWord("key")
 
 	_ = gateway.Init()
 

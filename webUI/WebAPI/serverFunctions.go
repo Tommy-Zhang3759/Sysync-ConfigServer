@@ -9,7 +9,7 @@ import (
 )
 
 type functionResponse struct {
-	Fname      string `json:"f_name"`
+	FName      string `json:"f_name"`
 	Message    string `json:"message,omitempty"`
 	Error      string `json:"error,omitempty"`
 	HttpStatus int    `json:"-"`
@@ -111,7 +111,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		_ = sendFunctionResponse(functionResponse{
 			HttpStatus: http.StatusOK,
 			Message:    "success",
-			Fname:      fName,
+			FName:      fName,
 		}, w)
 
 		//t2 := clientManage.Schedule{
