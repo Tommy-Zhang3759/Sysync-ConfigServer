@@ -200,7 +200,7 @@ func (c *CliContainer) Push(cli *Client) error {
 
 	_, err := c.db.Insert(query, cli.HostName, cli.IpAddr.String(), cli.MacAddr.String(), 000, cli.OsVersion, cli.ProductId, sysyncIdStr)
 	if err != nil {
-		return fmt.Errorf("failed to insert row: %v", err)
+		return err
 	}
 	c.container[cli.HostName] = cli
 	return nil
@@ -298,6 +298,10 @@ func (c *CliContainer) MacExists(mac string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func MacExists(mac string) (bool, error) {
+	return Container.MacExists(mac)
 }
 
 func (c *CliContainer) Exists(sysyncID string) (bool, error) {

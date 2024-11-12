@@ -24,8 +24,6 @@ func TestSearchNewClient_Run(t *testing.T) {
 		_ = p.Run()
 	}()
 
-	time.Sleep(2 * time.Second)
-
 	type Message struct {
 		FName     string `json:"f_name"`
 		Mac       string `json:"mac"`
@@ -51,15 +49,17 @@ func TestSearchNewClient_Run(t *testing.T) {
 		Port: 6004,
 	}
 
-	conn, _ := net.DialUDP("udp", nil, addr)
-	defer func(conn *net.UDPConn) {
-		_ = conn.Close()
-	}(conn)
+	for i := 0; i < 10000; i++ {
+		go func() {
+			conn, _ := net.DialUDP("udp", nil, addr)
+			defer func(conn *net.UDPConn) {
+				_ = conn.Close()
+			}(conn)
 
-	_, _ = conn.Write(message)
-
-	for true {
-		time.Sleep(time.Second)
+			_, _ = conn.Write(message)
+		}()
 	}
+
+	time.Sleep(10 * time.Second)
 
 }
