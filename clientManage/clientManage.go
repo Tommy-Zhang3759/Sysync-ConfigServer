@@ -10,7 +10,6 @@ import (
 	"log"
 	"net"
 	"path/filepath"
-	"sort"
 )
 
 var Container *CliContainer = nil
@@ -25,7 +24,7 @@ func Init(dbPath string) {
 
 type Client struct {
 	HostName   string           `json:"host_name"`
-	IpAddr     net.IP           `json:"ip_addr"`
+	IP         net.IP           `json:"ip_addr"`
 	MacAddr    net.HardwareAddr `json:"mac_addr"`
 	StatusCode int              `json:"status_code"`
 	OsVersion  string           `json:"os_version"`
@@ -38,7 +37,7 @@ type Client struct {
 
 func CreateNewClientInfo(
 	hostName string,
-	ipAddr net.IP,
+	ip net.IP,
 	macAddr net.HardwareAddr,
 	statusCode int,
 	osVersion string,
@@ -56,7 +55,7 @@ func CreateNewClientInfo(
 
 	return &Client{
 		HostName:   hostName,
-		IpAddr:     ipAddr,
+		IP:         ip,
 		MacAddr:    macAddr,
 		StatusCode: statusCode,
 		OsVersion:  osVersion,
@@ -78,25 +77,29 @@ func (c *Client) updateStatusCode(a int) {
 }
 
 type FriendlyClient struct {
-	HostName   string `json:"host_name"`
-	IpAddr     string `json:"ip_addr"`
-	MacAddr    string `json:"mac_addr"`
-	StatusCode int    `json:"status_code"`
-	OsVersion  string `json:"os_version"`
-	ProductId  string `json:"product_id"`
-	SysyncId   string `json:"sysync_id"`
+	HostName   string `json:"host_name,omitempty"`
+	IP         string `json:"ip_addr,omitempty"`
+	MacAddr    string `json:"mac_addr,omitempty"`
+	StatusCode int    `json:"status_code,omitempty"`
+	OsVersion  string `json:"os_version,omitempty"`
+	ProductId  string `json:"product_id,omitempty"`
+	SysyncId   string `json:"sysync_id,omitempty"`
 }
 
 // HumanFriendly converts a Client struct to a human-friendly JSON format.
 func (c *Client) HumanFriendly() FriendlyClient {
+	var ip = c.IP.String()
+	if ip == "<nil>" {
+		ip = ""
+	}
 	friendly := FriendlyClient{
 		HostName:   c.HostName,
-		IpAddr:     c.IpAddr.String(),
+		IP:         ip,
 		MacAddr:    c.MacAddr.String(),
 		StatusCode: c.StatusCode,
 		OsVersion:  c.OsVersion,
 		ProductId:  c.ProductId,
-		SysyncId:   hex.EncodeToString(c.SysyncId[:]),
+		SysyncId:   string(c.SysyncId[:]),
 	}
 
 	return friendly
@@ -175,7 +178,7 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 		// 创建 Client 实例并添加到容器
 		client := &Client{
 			HostName:   hostName,
-			IpAddr:     ipAddr,
+			IP:         ipAddr,
 			MacAddr:    macAddr,
 			StatusCode: statusCode,
 			OsVersion:  osVersion,
@@ -198,7 +201,7 @@ func (c *CliContainer) Push(cli *Client) error {
 
 	sysyncIdStr := hex.EncodeToString(cli.SysyncId[:]) // 将字节数组转换为十六进制字符串
 
-	_, err := c.db.Insert(query, cli.HostName, cli.IpAddr.String(), cli.MacAddr.String(), 000, cli.OsVersion, cli.ProductId, sysyncIdStr)
+	_, err := c.db.Insert(query, cli.HostName, cli.IP.String(), cli.MacAddr.String(), 000, cli.OsVersion, cli.ProductId, sysyncIdStr)
 	if err != nil {
 		return err
 	}
@@ -247,8 +250,8 @@ func (c *CliContainer) Get(sysyncID string) (*Client, error) {
 	}
 
 	if rows.Next() {
-		var hostName, ipAddrStr, macAddrStr, statCode, osVersion string
-		var productId []byte
+		var hostName, ipAddrStr, macAddrStr, osVersion, productId string
+		var statCode int
 		if err := rows.Scan(&hostName, &ipAddrStr, &macAddrStr, &statCode, &osVersion, &productId); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
@@ -260,15 +263,16 @@ func (c *CliContainer) Get(sysyncID string) (*Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid MAC address: %v", err)
 		}
+		var sysyncIDArray [32]byte
+		copy(sysyncIDArray[:], sysyncID)
 		return &Client{
 			HostName:   hostName,
-			IpAddr:     net.ParseIP(ipAddrStr),
+			IP:         net.ParseIP(ipAddrStr),
 			MacAddr:    macAddr,
-			StatusCode: 0,
-			OsVersion:  "",
-			ProductId:  "",
-			SysyncId:   [32]byte{},
-			conn:       nil,
+			StatusCode: statCode,
+			OsVersion:  osVersion,
+			ProductId:  productId,
+			SysyncId:   sysyncIDArray,
 			caught:     false,
 		}, nil
 	} else {
@@ -324,12 +328,33 @@ func (c *CliContainer) Exists(sysyncID string) (bool, error) {
 	return false, nil
 }
 
-func (c *CliContainer) AllHostName() []string {
-	keys := make([]string, 0, len(c.container))
-	for k := range c.container {
-		keys = append(keys, k)
+func (c *CliContainer) AllHostName() ([]Client, error) {
+
+	query := "SELECT sysync_ID, host_name FROM win_cli"
+	rows, err := c.db.Query(query)
+	if err != nil {
+		log.Fatalf("Failed to query win_cli: %v", err)
 	}
-	return keys
+
+	var clients []Client
+
+	for rows.Next() {
+		var sysyncID []byte
+		var hostName string
+
+		if err := rows.Scan(&sysyncID, &hostName); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %v", err)
+		}
+		clients = append(clients, Client{
+			HostName: hostName,
+			SysyncId: [32]byte(sysyncID),
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return clients, err
+	}
+	return clients, nil
 }
 
 func DiscoverClient(container *CliContainer, port int) {
@@ -362,11 +387,6 @@ func DiscoverClient(container *CliContainer, port int) {
 	}
 }
 
-func AllHostName() []string {
-	keys := make([]string, 0, len(Container.container))
-	for k := range Container.container {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
+func AllHostName() ([]Client, error) {
+	return Container.AllHostName()
 }

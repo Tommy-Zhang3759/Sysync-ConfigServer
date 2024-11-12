@@ -20,9 +20,9 @@ async function loadClients() {
             data.forEach(hostname => {
                 const div = document.createElement('div');
                 div.className = 'client-item';
-                div.innerText = hostname; // 直接使用 hostname
+                div.innerText = hostname['host_name']; // 直接使用 hostname
                 clientList.appendChild(div);
-                div.onclick = () => clientDetailedMenu(hostname);
+                div.onclick = () => clientDetailedMenu(hostname['sysync_id']);
             });
         } else {
             console.error('返回的数据中没有 clients 字段');
@@ -101,4 +101,4 @@ function updateSystemStatus() {
 }
 
 loadClients()
-requestClientInfo('STU01')
+requestClientInfo()

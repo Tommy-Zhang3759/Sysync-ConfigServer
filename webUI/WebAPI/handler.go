@@ -85,7 +85,12 @@ func cliInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		rsp, _ = json.Marshal(clients)
 	} else {
-		rsp, _ = json.Marshal(clientManage.AllHostName())
+		clients, _ := clientManage.AllHostName()
+		var freiendlyClients []clientManage.FriendlyClient
+		for _, client := range clients {
+			freiendlyClients = append(freiendlyClients, client.HumanFriendly())
+		}
+		rsp, _ = json.Marshal(freiendlyClients)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
