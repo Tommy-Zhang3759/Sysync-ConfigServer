@@ -1,7 +1,17 @@
 .gitignore
-.idea
 resources/*
 test
 go.sum
-.vscode
 *.code-workspace
+
+# Binary files
+*.exe
+*.dll
+*.so
+
+# Log files
+*.log
+
+# IDE-specific files
+.vscode/
+.idea/

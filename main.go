@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+var Version string
+
 func init() {
 
 }
