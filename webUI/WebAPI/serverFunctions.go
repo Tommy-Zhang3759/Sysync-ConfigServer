@@ -83,7 +83,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			return
 		}
 
-		sender := APIWorkers.MessSending{
+		sender := APIWorkers.TextMessage{
 			Dest: adders,
 			MessContent: UpdateHostNameRequest{
 				FName:    "update_host_name",

@@ -6,21 +6,22 @@ import (
 	"net"
 )
 
-type MessSending struct {
+type TextMessage struct {
 	APIGateway.UDPAPIPortTemp
 	Dest        []net.UDPAddr
 	MessContent interface{}
 }
 
-func (m *MessSending) name() {
-
+func (m *TextMessage) name() {
+	return
 }
-func (m *MessSending) Run() error {
+
+func (m *TextMessage) Run() error {
 	err := m.Gateway.SendMess(m.bodyJson(), m.Dest...)
 	return err
 }
 
-func (m *MessSending) bodyJson() []byte {
+func (m *TextMessage) bodyJson() []byte {
 	mess, _ := json.Marshal(m.MessContent)
 	return mess
 }
