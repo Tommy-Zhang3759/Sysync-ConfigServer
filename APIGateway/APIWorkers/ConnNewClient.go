@@ -14,7 +14,7 @@ type ConnNewClient struct {
 	cliContainer *clientManage.CliContainer
 }
 
-func (u *ConnNewClient) Run() error {
+func (u *ConnNewClient) run() error {
 	stop := false
 	// TODO: use api for data reading
 	//var db DataFrame.DataFrame = &DataFrame.SQLite{}

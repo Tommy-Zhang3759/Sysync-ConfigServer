@@ -18,7 +18,7 @@ func TestHostNameReq_Run(t *testing.T) {
 	}()
 	_ = gateway.Add(&p)
 	go func() {
-		_ = p.Run()
+		_ = p.Start()
 	}()
 
 	message := []byte("{\"mac\": \"8c:ec:4b:a4:04:2e\", \"f_name\": \"key\"}")

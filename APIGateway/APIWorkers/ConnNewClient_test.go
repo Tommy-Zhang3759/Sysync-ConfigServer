@@ -21,7 +21,7 @@ func TestSearchNewClient_Run(t *testing.T) {
 	}()
 
 	go func() {
-		_ = p.Run()
+		_ = p.Start()
 	}()
 
 	type Message struct {

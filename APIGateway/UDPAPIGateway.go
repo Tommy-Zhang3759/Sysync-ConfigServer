@@ -30,7 +30,7 @@ func (u *UDPAPIPortTemp) GetKeyWord() string {
 
 func (u *UDPAPIPortTemp) Start() error {
 	go func() {
-		_ = u.Run()
+		_ = u.run()
 	}()
 	return nil
 }
@@ -50,7 +50,7 @@ func (u *UDPAPIPortTemp) Init(gateway *UDPAPIGateway) {
 	u.MessageQue = utils.NewQueue()
 }
 
-func (u *UDPAPIPortTemp) Run() error { // a template to write APIs' definition
+func (u *UDPAPIPortTemp) run() error { // a template to write APIs' definition
 	stop := false
 
 	for stop == false {
@@ -213,7 +213,7 @@ func (a *UDPAPIGateway) Stop() error {
 }
 
 type UDPAPIPort interface {
-	Run() error
+	run() error
 	Start() error
 	Stop() error
 	NewMess(mess UDPMessage)

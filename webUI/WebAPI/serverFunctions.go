@@ -2,6 +2,7 @@ package WebAPI
 
 import (
 	"ConfigServer/APIGateway/APIWorkers"
+	"ConfigServer/APIGateway/ClientAPICallers"
 	"ConfigServer/clientManage"
 	"encoding/json"
 	"net"
@@ -46,12 +47,6 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 
-		type UpdateHostNameRequest struct {
-			FName    string `json:"f_name"`
-			HostIP   string `json:"host_ip,omitempty"`
-			HostPort int    `json:"host_port,omitempty"`
-		}
-
 		adders := make([]net.UDPAddr, 0, len(requestData.DestSysyncID)+len(requestData.DestIP))
 
 		var destPort int
@@ -83,14 +78,12 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			return
 		}
 
-		sender := APIWorkers.TextMessage{
-			Dest: adders,
-			MessContent: UpdateHostNameRequest{
-				FName:    "update_host_name",
-				HostIP:   requestData.HostIP,
-				HostPort: clientManage.CliUdpApiGateway.Port(),
-			},
-		}
+		sender := ClientAPICallers.NewUpdateHostName(
+			adders,
+			"update_host_name",
+			requestData.HostIP,
+			clientManage.CliUdpApiGateway.Port(),
+		)
 
 		nameServer := APIWorkers.HostNameReq{}
 		nameServer.SetKeyWord("host_name_req")
@@ -102,11 +95,11 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		//		return err
 		//	},
 		//}
-		_ = sender.Run()
+		_ = sender.Start()
 
 		addErr := clientManage.CliUdpApiGateway.Add(&nameServer)
 		if addErr == nil {
-			_ = nameServer.Run()
+			_ = nameServer.Start()
 		}
 		_ = sendFunctionResponse(functionResponse{
 			HttpStatus: http.StatusOK,

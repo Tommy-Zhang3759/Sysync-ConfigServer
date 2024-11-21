@@ -14,7 +14,7 @@ type HostNameReq struct {
 	APIGateway.UDPAPIPortTemp
 }
 
-func (u *HostNameReq) Run() error {
+func (u *HostNameReq) run() error {
 	stop := false
 
 	var db DataFrame.DataFrame = clientManage.DataFrameConn()
