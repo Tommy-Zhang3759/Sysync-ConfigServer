@@ -51,7 +51,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		adders := make([]net.UDPAddr, 0, len(requestData.DestIP))
 
 		var destPort int
-		if requestData.DestPort == 0 && (len(requestData.DestIP) != 1 || requestData.DestIP[0] != "") { // got null in json
+		if requestData.DestPort <= 0 && (len(requestData.DestIP) != 1 || requestData.DestIP[0] != "") { // got null in json
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		} else {

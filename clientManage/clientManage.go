@@ -152,7 +152,7 @@ func DataFrameConn() *DataFrame.SQLite {
 
 // TODO: read Port from database and remove
 func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
-	query := `SELECT host_name, IP_address, MAC_address, status_code, OS_version, product_ID, sysync_ID FROM win_cli`
+	query := `SELECT host_name, IP_address, MAC_address, status_code, OS_version, product_ID, sysync_ID, Port FROM win_cli`
 	rows, err := db.Query(query)
 	if err != nil {
 		return fmt.Errorf("failed to query database: %v", err)
@@ -165,8 +165,9 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 		var hostName, ipAddrStr, macAddrStr, osVersion, productId string
 		var statusCode int
 		var sysyncId []byte
+		var port int
 
-		if err = rows.Scan(&hostName, &ipAddrStr, &macAddrStr, &statusCode, &osVersion, &productId, &sysyncId); err != nil {
+		if err = rows.Scan(&hostName, &ipAddrStr, &macAddrStr, &statusCode, &osVersion, &productId, &sysyncId, port); err != nil {
 			return fmt.Errorf("failed to scan row: %v", err)
 		}
 
@@ -181,6 +182,7 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 		client := &Client{
 			HostName:   hostName,
 			IP:         ipAddr,
+			Port:       port,
 			MacAddr:    macAddr,
 			StatusCode: statusCode,
 			OsVersion:  osVersion,
@@ -199,11 +201,11 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 }
 
 func (c *CliContainer) Push(cli *Client) error {
-	query := "INSERT INTO win_cli (host_name, IP_address, MAC_address, status_code, OS_version, product_ID, sysync_ID) VALUES (?, ?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO win_cli (host_name, IP_address, MAC_address, status_code, OS_version, product_ID, sysync_ID, Port) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 
-	sysyncIdStr := hex.EncodeToString(cli.SysyncId[:]) // 将字节数组转换为十六进制字符串
+	sysyncIdStr := hex.EncodeToString(cli.SysyncId[:])
 
-	_, err := c.db.Insert(query, cli.HostName, cli.IP.String(), cli.MacAddr.String(), 000, cli.OsVersion, cli.ProductId, sysyncIdStr)
+	_, err := c.db.Insert(query, cli.HostName, cli.IP.String(), cli.MacAddr.String(), 000, cli.OsVersion, cli.ProductId, sysyncIdStr, cli.Port)
 	if err != nil {
 		return err
 	}
