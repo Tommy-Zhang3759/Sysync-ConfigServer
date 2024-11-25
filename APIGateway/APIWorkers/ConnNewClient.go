@@ -57,6 +57,7 @@ func (u *ConnNewClient) run() error {
 
 				var hostname string = reqPack.Text["host_name"].(string)
 				var ip net.IP = reqPack.Addr.IP
+				var port = reqPack.Addr.Port
 				var mac, macErr = net.ParseMAC(reqPack.Text["mac"].(string))
 				var osVersion string = reqPack.Text["os_version"].(string)
 				var productID string = reqPack.Text["product_id"].(string)
@@ -69,6 +70,7 @@ func (u *ConnNewClient) run() error {
 					newCli := clientManage.CreateNewClientInfo(
 						hostname,
 						ip,
+						port,
 						mac,
 						status,
 						osVersion,

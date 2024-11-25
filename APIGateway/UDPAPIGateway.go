@@ -6,6 +6,8 @@ import (
 	"net"
 )
 
+var CliUdpApiGateway *UDPAPIGateway = nil // definition of tcp port
+
 type UDPMessage struct {
 	Addr net.UDPAddr
 	Text map[string]interface{}

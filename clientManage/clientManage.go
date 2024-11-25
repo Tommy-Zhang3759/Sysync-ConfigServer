@@ -1,7 +1,6 @@
 package clientManage
 
 import (
-	"ConfigServer/APIGateway"
 	"ConfigServer/utils/database"
 	"crypto/sha256"
 	"database/sql"
@@ -14,17 +13,15 @@ import (
 
 var Container *CliContainer = nil
 
-func Init(dbPath string) {
+func Init(dbPath string) error {
 	Container = NewCliContainer(dbPath)
-	Container.Init(dbPath)
-	// TODO: support identify the server ip that is under the same net range as clients
-	CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort, "0.0.0.0")
-	CliUdpApiGateway.Init()
+	return Container.Init(dbPath)
 }
 
 type Client struct {
 	HostName   string           `json:"host_name"`
 	IP         net.IP           `json:"ip_addr"`
+	Port       int              `json:"port"`
 	MacAddr    net.HardwareAddr `json:"mac_addr"`
 	StatusCode int              `json:"status_code"`
 	OsVersion  string           `json:"os_version"`
@@ -38,6 +35,7 @@ type Client struct {
 func CreateNewClientInfo(
 	hostName string,
 	ip net.IP,
+	port int,
 	macAddr net.HardwareAddr,
 	statusCode int,
 	osVersion string,
@@ -56,6 +54,7 @@ func CreateNewClientInfo(
 	return &Client{
 		HostName:   hostName,
 		IP:         ip,
+		Port:       port,
 		MacAddr:    macAddr,
 		StatusCode: statusCode,
 		OsVersion:  osVersion,
@@ -80,6 +79,7 @@ type FriendlyClient struct {
 	HostName   string `json:"host_name,omitempty"`
 	IP         string `json:"ip_addr,omitempty"`
 	MacAddr    string `json:"mac_addr,omitempty"`
+	Port       int    `json:"port,omitempty"`
 	StatusCode int    `json:"status_code,omitempty"`
 	OsVersion  string `json:"os_version,omitempty"`
 	ProductId  string `json:"product_id,omitempty"`
@@ -95,6 +95,7 @@ func (c *Client) HumanFriendly() FriendlyClient {
 	friendly := FriendlyClient{
 		HostName:   c.HostName,
 		IP:         ip,
+		Port:       c.Port,
 		MacAddr:    c.MacAddr.String(),
 		StatusCode: c.StatusCode,
 		OsVersion:  c.OsVersion,
@@ -149,6 +150,7 @@ func DataFrameConn() *DataFrame.SQLite {
 	return Container.DataFrameConn()
 }
 
+// TODO: read Port from database and remove
 func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 	query := `SELECT host_name, IP_address, MAC_address, status_code, OS_version, product_ID, sysync_ID FROM win_cli`
 	rows, err := db.Query(query)
@@ -186,7 +188,7 @@ func (c *CliContainer) loadClientsFromDB(db *DataFrame.SQLite) error {
 			SysyncId:   [32]byte(sysyncId),
 		}
 
-		c.Push(client)
+		return c.Push(client)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -256,12 +258,12 @@ func (c *CliContainer) Get(sysyncID string) (*Client, error) {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
 		if rows.Next() {
-			return nil, fmt.Errorf("sysync ID is duplicated")
+			return nil, fmt.Errorf("sysync ID is duplicated in database: %s", sysyncID)
 		}
 
 		macAddr, err := net.ParseMAC(macAddrStr)
 		if err != nil {
-			return nil, fmt.Errorf("invalid MAC address: %v", err)
+			return nil, fmt.Errorf("invalid MAC address from database: %v", err)
 		}
 		var sysyncIDArray [32]byte
 		copy(sysyncIDArray[:], sysyncID)

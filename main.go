@@ -1,6 +1,7 @@
 package main
 
 import (
+	"ConfigServer/APIGateway"
 	"ConfigServer/clientManage"
 	"ConfigServer/webUI"
 	"time"
@@ -8,18 +9,24 @@ import (
 
 var Version string
 
-func init() {
+var UdpHostPort = 6004
+var UdpClientPort = 6003
 
+func Init(dbPath string) {
+	// TODO: support identify the server ip that is under the same net range as clients
+	APIGateway.CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort, "0.0.0.0")
+	APIGateway.CliUdpApiGateway.Init()
+	go func() {
+		_ = APIGateway.CliUdpApiGateway.Run()
+	}()
+
+	clientManage.Init(dbPath)
 }
 
 func main() {
 	//var mvg sync.WaitGroup
 
-	clientManage.Init("data/clientInfo.db")
-
-	go func() {
-		_ = clientManage.CliUdpApiGateway.Run()
-	}()
+	Init("data/clientInfo.db")
 
 	go webUI.StartServer("8080", webUI.Handler)
 

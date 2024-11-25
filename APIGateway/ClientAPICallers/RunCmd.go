@@ -2,7 +2,6 @@ package ClientAPICallers
 
 import (
 	"ConfigServer/APIGateway"
-	"net"
 )
 
 type RunCmdMessTemp struct {
@@ -16,16 +15,13 @@ type RunCmd struct {
 }
 
 func NewRunCmd(
-	Dest []net.UDPAddr,
-	CliAPIName string,
 	cmd []byte,
 ) *RunCmd {
 	return &RunCmd{
 		CallerTemp: APIGateway.CallerTemp{
-			Dest: Dest,
 			MessContent: RunCmdMessTemp{
 				CallMessTemp: APIGateway.CallMessTemp{
-					FName: CliAPIName,
+					FName: "run_command",
 				},
 				Cmd: cmd,
 			},

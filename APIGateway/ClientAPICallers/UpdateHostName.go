@@ -2,7 +2,6 @@ package ClientAPICallers
 
 import (
 	"ConfigServer/APIGateway"
-	"net"
 )
 
 type UpdateHostNameMessTemp struct {
@@ -17,17 +16,14 @@ type UpdateHostName struct {
 }
 
 func NewUpdateHostName(
-	Dest []net.UDPAddr,
-	CliAPIName string,
 	HostIP string,
 	HostPort int,
 ) *UpdateHostName {
 	return &UpdateHostName{
 		CallerTemp: APIGateway.CallerTemp{
-			Dest: Dest,
 			MessContent: UpdateHostNameMessTemp{
 				CallMessTemp: APIGateway.CallMessTemp{
-					FName: CliAPIName,
+					FName: "update_host_name",
 				},
 				HostIP:   HostIP,
 				HostPort: HostPort,

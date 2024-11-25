@@ -1,9 +1,9 @@
 package WebAPI
 
 import (
+	"ConfigServer/APIGateway"
 	"ConfigServer/APIGateway/APIWorkers"
 	"ConfigServer/APIGateway/ClientAPICallers"
-	"ConfigServer/clientManage"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -45,13 +45,15 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		var requestData updateHostNameReq
 		if err = json.Unmarshal(*body, &requestData); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
+			return
 		}
 
-		adders := make([]net.UDPAddr, 0, len(requestData.DestSysyncID)+len(requestData.DestIP))
+		adders := make([]net.UDPAddr, 0, len(requestData.DestIP))
 
 		var destPort int
-		if requestData.DestPort == 0 { // got null in json
-			destPort = clientManage.UdpClientPort
+		if requestData.DestPort == 0 && (len(requestData.DestIP) != 1 || requestData.DestIP[0] != "") { // got null in json
+			w.WriteHeader(http.StatusBadRequest)
+			return
 		} else {
 			destPort = requestData.DestPort
 		}
@@ -70,20 +72,19 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		}
 
 		if requestData.HostIP == "" {
-			requestData.HostIP = clientManage.CliUdpApiGateway.IP()
-		}
-
-		if len(adders) == 0 {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+			requestData.HostIP = APIGateway.CliUdpApiGateway.IP()
 		}
 
 		sender := ClientAPICallers.NewUpdateHostName(
-			adders,
-			"update_host_name",
 			requestData.HostIP,
-			clientManage.CliUdpApiGateway.Port(),
+			APIGateway.CliUdpApiGateway.Port(),
 		)
+		err = sender.MoreDestBySysyncID(requestData.DestSysyncID...)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		sender.MoreDestByIP(adders...)
 
 		nameServer := APIWorkers.HostNameReq{}
 		nameServer.SetKeyWord("host_name_req")
@@ -97,7 +98,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		//}
 		_ = sender.Run()
 
-		addErr := clientManage.CliUdpApiGateway.Add(&nameServer)
+		addErr := APIGateway.CliUdpApiGateway.Add(&nameServer)
 		if addErr == nil {
 			_ = nameServer.Start()
 		}
@@ -118,7 +119,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 			case "send_command_to_host":
 
 				sender := APIGateway.MessSending{
-					Dest: addrs,
+					destIP: addrs,
 					MessContent: map[string]interface{}{
 						"f_name":  "run_command",
 						"command": bodyJson["command"].(string),
@@ -138,7 +139,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 				//
 			case "set_server_info":
 				sender := APIGateway.MessSending{
-					Dest: addrs,
+					destIP: addrs,
 					MessContent: map[string]interface{}{
 						"f_name":      "set_server_info",
 						"server_ip":   bodyJson["server_ip"].(string),
