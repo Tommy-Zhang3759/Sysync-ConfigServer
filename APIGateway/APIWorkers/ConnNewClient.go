@@ -14,20 +14,19 @@ type ConnNewClient struct {
 	cliContainer *clientManage.CliContainer
 }
 
+func NewConnNewClient(cliContainer *clientManage.CliContainer) *ConnNewClient {
+	return &ConnNewClient{cliContainer: cliContainer}
+}
+
+func (u *ConnNewClient) Start() error {
+	go func() {
+		_ = u.run()
+	}()
+	return nil
+}
+
 func (u *ConnNewClient) run() error {
 	stop := false
-	// TODO: use api for data reading
-	//var db DataFrame.DataFrame = &DataFrame.SQLite{}
-	//
-	//err := db.Connect("data/clientInfo.db")
-	//if err != nil {
-	//	log.Fatalf("Failed to connect to database: %v", err)
-	//}
-	//defer func() {
-	//	if err = db.Close(); err != nil {
-	//		log.Fatalf("Failed to disconnect to database: %v", err)
-	//	}
-	//}()
 
 	for stop == false {
 		reqPack := u.MessageQue.Pop().(APIGateway.UDPMessage)

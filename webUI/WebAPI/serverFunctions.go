@@ -95,7 +95,7 @@ func function(w http.ResponseWriter, r *http.Request, body *[]byte) {
 		//		return err
 		//	},
 		//}
-		_ = sender.Start()
+		_ = sender.Run()
 
 		addErr := clientManage.CliUdpApiGateway.Add(&nameServer)
 		if addErr == nil {

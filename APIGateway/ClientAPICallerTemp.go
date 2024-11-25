@@ -23,18 +23,11 @@ type CallerTemp struct {
 	MessContent interface{}
 }
 
-func (m *CallerTemp) Start() error {
-	go func() {
-		_ = m.run()
-	}()
-	return nil
-}
-
 func (m *CallerTemp) Init(gateway *UDPAPIGateway) {
 	m.Gateway = gateway
 }
 
-func (m *CallerTemp) run() error {
+func (m *CallerTemp) Run() error {
 	err := m.Gateway.SendMess(m.BodyJson(), m.Dest...)
 	return err
 

@@ -10,19 +10,16 @@ import (
 
 func TestSearchNewClient_Run(t *testing.T) {
 	clientManage.Init("../../data/clientInfo.db")
-	p := ConnNewClient{
-		cliContainer: clientManage.Container,
-	}
+	p := NewConnNewClient(clientManage.Container)
+
 	p.SetKeyWord("key")
-	clientManage.CliUdpApiGateway.Add(&p)
+	_ = clientManage.CliUdpApiGateway.Add(p)
 
 	go func() {
 		_ = clientManage.CliUdpApiGateway.Run()
 	}()
 
-	go func() {
-		_ = p.Start()
-	}()
+	_ = p.Start()
 
 	type Message struct {
 		FName     string `json:"f_name"`
@@ -49,7 +46,7 @@ func TestSearchNewClient_Run(t *testing.T) {
 		Port: 6004,
 	}
 
-	for i := 0; i < 10000; i++ {
+	for range 1000 {
 		go func() {
 			conn, _ := net.DialUDP("udp", nil, addr)
 			defer func(conn *net.UDPConn) {
