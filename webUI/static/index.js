@@ -42,7 +42,7 @@ async function clientDetailedMenu(hostname) {
         <p>Host name: ${c.host_name}</p>
         <p>IP: ${c.ip_addr}</p>
         <p>状态: ${paddedStatusCode}</p>
-        <button onclick="syncSettings(null, '${c.ip_addr}', null, null, null)">Syncing System Configrations</button>
+        <button onclick="syncSettings('${c.sysync_id}', null, null, null, null)">Syncing System Configrations</button>
     `;
 }
 
@@ -101,4 +101,3 @@ function updateSystemStatus() {
 }
 
 loadClients()
-requestClientInfo()
