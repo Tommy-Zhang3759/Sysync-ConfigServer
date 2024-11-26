@@ -2,6 +2,8 @@ package APIWorkers
 
 import (
 	"ConfigServer/APIGateway"
+	"ConfigServer/clientManage"
+	"log"
 	"net"
 	"testing"
 )
@@ -10,6 +12,12 @@ func TestHostNameReq_Run(t *testing.T) {
 	var gateway = APIGateway.NewUDPAPIGateway(6004, "0.0.0.0")
 	p := HostNameReq{}
 	p.SetKeyWord("key")
+
+	err := clientManage.Init("../../data/clientInfo.db")
+	if err != nil {
+		log.Panic("failed to init clientManage", err.Error())
+		return
+	}
 
 	_ = gateway.Init()
 

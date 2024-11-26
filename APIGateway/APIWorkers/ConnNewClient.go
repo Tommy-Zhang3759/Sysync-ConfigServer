@@ -19,13 +19,6 @@ func NewConnNewClient(cliContainer *clientManage.CliContainer) *ConnNewClient {
 }
 
 func (u *ConnNewClient) Start() error {
-	go func() {
-		_ = u.run()
-	}()
-	return nil
-}
-
-func (u *ConnNewClient) run() error {
 	stop := false
 
 	for stop == false {

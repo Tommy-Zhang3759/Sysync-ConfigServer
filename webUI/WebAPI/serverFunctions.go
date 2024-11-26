@@ -56,8 +56,6 @@ func formatDestAddr(destIPs *[]string, destPort int) ([]net.UDPAddr, error) {
 
 	if destPort <= 0 && len(*destIPs) > 1 && (*destIPs)[0] != "" {
 		return nil, errors.New("invalid port number")
-	} else {
-		destPort = APIGateway.CliUdpApiGateway.Port()
 	}
 
 	for _, v := range *destIPs {
@@ -122,7 +120,7 @@ func updateHostName(w http.ResponseWriter, body *[]byte, fName string) {
 	sender.MoreDestByIP(address...)
 
 	namingService := APIWorkers.HostNameReq{}
-	namingService.SetKeyWord(fName)
+	namingService.SetKeyWord("host_name_req")
 
 	//t := clientManage.Schedule{
 	//	ExecTime: time.Time{},
@@ -132,9 +130,10 @@ func updateHostName(w http.ResponseWriter, body *[]byte, fName string) {
 	//	},
 	//}
 
-	addErr := APIGateway.CliUdpApiGateway.Add(&namingService)
-	if addErr == nil {
-		_ = namingService.Start()
+	if addErr := APIGateway.CliUdpApiGateway.Add(&namingService); addErr == nil {
+		go func() {
+			_ = namingService.Start()
+		}()
 	}
 
 	_ = sender.Run()
@@ -181,9 +180,6 @@ func runCommand(w http.ResponseWriter, body *[]byte, fName string) {
 	}
 	sender.MoreDestByIP(address...)
 
-	namingService := APIWorkers.HostNameReq{}
-	namingService.SetKeyWord(fName)
-
 	//t := clientManage.Schedule{
 	//	ExecTime: time.Time{},
 	//	Do: func() error {
@@ -191,12 +187,6 @@ func runCommand(w http.ResponseWriter, body *[]byte, fName string) {
 	//		return err
 	//	},
 	//}
-
-	addErr := APIGateway.CliUdpApiGateway.Add(&namingService)
-	if addErr == nil {
-		_ = namingService.Start()
-	}
-
 	_ = sender.Run()
 
 	_ = sendFunctionResponse(functionResponse{

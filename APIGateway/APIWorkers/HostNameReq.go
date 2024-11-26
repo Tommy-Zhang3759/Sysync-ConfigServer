@@ -14,7 +14,7 @@ type HostNameReq struct {
 	APIGateway.UDPAPIPortTemp
 }
 
-func (u *HostNameReq) run() error {
+func (u *HostNameReq) Start() error {
 	stop := false
 
 	var db DataFrame.DataFrame = clientManage.DataFrameConn()
@@ -29,9 +29,11 @@ func (u *HostNameReq) run() error {
 
 		select {
 		case <-u.EndRun:
-			fmt.Println("Received stop signal, goroutine exiting...")
+			log.Println("Received stop signal, goroutine exiting...")
 			stop = true
 		default:
+
+			log.Printf("Recieved reqPack: %v", reqPack)
 
 			type ClientRequest struct {
 				Mac string `json:"mac"`
