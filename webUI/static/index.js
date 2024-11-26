@@ -39,12 +39,17 @@ async function clientDetailedMenu(hostname) {
     const paddedStatusCode = String(c.status_code).padStart(3, '0');
 
     clientDetails.innerHTML = `
-        <p>Host name: ${c.host_name}</p>
-        <p>IP: ${c.ip_addr}</p>
-        <p>Status: ${paddedStatusCode}</p>
+        <div>
+            <p>Host name: ${c.host_name}</p>
+            <p>IP: ${c.ip_addr}</p>
+            <p>Status: ${paddedStatusCode}</p>
+        </div>
         <button onclick="updateHostName('${c.sysync_id}', null, null, null, null)">Syncing System Configrations</button>
-        <input id="commandInput">
-        <button onclick="runCommand('${c.sysync_id}', null, null)">Run Command</button>
+        <div>
+            <input id="commandInput">
+            <button onclick="runCommand('${c.sysync_id}', null, null)">Run Command</button>
+        </div>
+        
     `;
 }
 
@@ -90,6 +95,11 @@ function runCommand(destSysyncId, destIpAddr, destPort) {
     }
     if (!Array.isArray(destIpAddr) || !destIpAddr.length) {
         destIpAddr = [destIpAddr];
+    }
+    const command = document.getElementById("commandInput").value;
+
+    if (command === "" || command == null){
+        return;
     }
     fetch('/api/func', {
         method: 'POST',
