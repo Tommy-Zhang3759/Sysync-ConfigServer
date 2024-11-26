@@ -20,7 +20,7 @@ async function loadClients() {
             data.forEach(hostname => {
                 const div = document.createElement('div');
                 div.className = 'client-item';
-                div.innerText = hostname['host_name']; // 直接使用 hostname
+                div.innerText = hostname['host_name'];
                 clientList.appendChild(div);
                 div.onclick = () => clientDetailedMenu(hostname['sysync_id']);
             });
@@ -41,8 +41,10 @@ async function clientDetailedMenu(hostname) {
     clientDetails.innerHTML = `
         <p>Host name: ${c.host_name}</p>
         <p>IP: ${c.ip_addr}</p>
-        <p>状态: ${paddedStatusCode}</p>
-        <button onclick="syncSettings('${c.sysync_id}', null, null, null, null)">Syncing System Configrations</button>
+        <p>Status: ${paddedStatusCode}</p>
+        <button onclick="updateHostName('${c.sysync_id}', null, null, null, null)">Syncing System Configrations</button>
+        <input id="commandInput">
+        <button onclick="runCommand('${c.sysync_id}', null, null)">Run Command</button>
     `;
 }
 
@@ -54,8 +56,7 @@ async function requestClientInfo(clientId) {
     return client;
 }
 
-// 模拟操作客户端的功能
-function syncSettings(destSysyncId, destIpAddr, destPort, server_ip_addr, server_port) {
+function updateHostName(destSysyncId, destIpAddr, destPort, server_ip_addr, server_port) {
     if (!Array.isArray(destSysyncId) || !destSysyncId.length) {
         destSysyncId = [destSysyncId];
     }
@@ -74,6 +75,33 @@ function syncSettings(destSysyncId, destIpAddr, destPort, server_ip_addr, server
             dest_port: destPort,
             host_ip: server_ip_addr,
             host_port: server_port
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Request sent:', data);
+        })
+        .catch(error => console.error('Error while sending:', error));
+}
+
+function runCommand(destSysyncId, destIpAddr, destPort) {
+    if (!Array.isArray(destSysyncId) || !destSysyncId.length) {
+        destSysyncId = [destSysyncId];
+    }
+    if (!Array.isArray(destIpAddr) || !destIpAddr.length) {
+        destIpAddr = [destIpAddr];
+    }
+    fetch('/api/func', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            dest_sysync_id: destSysyncId,
+            f_name: "run_command",
+            dest_ip: destIpAddr,
+            dest_port: destPort,
+            command: document.getElementById("commandInput").value
         })
     })
         .then(response => response.json())

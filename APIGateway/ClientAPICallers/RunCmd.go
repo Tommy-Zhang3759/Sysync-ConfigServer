@@ -6,7 +6,7 @@ import (
 
 type RunCmdMessTemp struct {
 	APIGateway.CallMessTemp
-	Cmd []byte `json:"command"`
+	Cmd string `json:"command"`
 }
 
 type RunCmd struct {
@@ -15,7 +15,7 @@ type RunCmd struct {
 }
 
 func NewRunCmd(
-	cmd []byte,
+	cmd string,
 ) *RunCmd {
 	return &RunCmd{
 		CallerTemp: APIGateway.CallerTemp{

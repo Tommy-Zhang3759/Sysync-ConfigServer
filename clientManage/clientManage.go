@@ -244,7 +244,7 @@ func (c *CliContainer) Get(sysyncID string) (*Client, error) {
 		return nil, fmt.Errorf("call the container before initiate")
 	}
 
-	query := "SELECT host_name, IP_address, MAC_address, status_code, OS_version, product_ID FROM win_cli WHERE sysync_ID = ? "
+	query := "SELECT host_name, IP_address, Port, MAC_address, status_code, OS_version, product_ID FROM win_cli WHERE sysync_ID = ? "
 	rows, err := c.db.Query(query, sysyncID)
 	defer func(rows *sql.Rows) {
 		_ = rows.Close()
@@ -255,8 +255,8 @@ func (c *CliContainer) Get(sysyncID string) (*Client, error) {
 
 	if rows.Next() {
 		var hostName, ipAddrStr, macAddrStr, osVersion, productId string
-		var statCode int
-		if err := rows.Scan(&hostName, &ipAddrStr, &macAddrStr, &statCode, &osVersion, &productId); err != nil {
+		var statCode, port int
+		if err := rows.Scan(&hostName, &ipAddrStr, &port, &macAddrStr, &statCode, &osVersion, &productId); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %v", err)
 		}
 		if rows.Next() {
@@ -272,6 +272,7 @@ func (c *CliContainer) Get(sysyncID string) (*Client, error) {
 		return &Client{
 			HostName:   hostName,
 			IP:         net.ParseIP(ipAddrStr),
+			Port:       port,
 			MacAddr:    macAddr,
 			StatusCode: statCode,
 			OsVersion:  osVersion,
