@@ -9,12 +9,12 @@ import (
 
 var Version string
 
-var UdpHostPort = 6004
-var UdpClientPort = 6003
+const UdpServerPort = 6004
+const UdpClientPort = 6003
 
 func Init(dbPath string) {
 	// TODO: support identify the server ip that is under the same net range as clients
-	APIGateway.CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpHostPort, "0.0.0.0")
+	APIGateway.CliUdpApiGateway = APIGateway.NewUDPAPIGateway(UdpServerPort, "0.0.0.0")
 	APIGateway.CliUdpApiGateway.Init()
 	go func() {
 		_ = APIGateway.CliUdpApiGateway.Run()

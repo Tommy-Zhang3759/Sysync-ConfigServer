@@ -1,6 +1,7 @@
 package APIWorkers
 
 import (
+	"ConfigServer/APIGateway"
 	"ConfigServer/clientManage"
 	"encoding/json"
 	"net"
@@ -9,14 +10,14 @@ import (
 )
 
 func TestSearchNewClient_Run(t *testing.T) {
-	clientManage.Init("../../data/clientInfo.db")
+	_ = clientManage.Init("../../data/clientInfo.db")
 	p := NewConnNewClient(clientManage.Container)
 
 	p.SetKeyWord("key")
-	_ = clientManage.CliUdpApiGateway.Add(p)
+	_ = APIGateway.CliUdpApiGateway.Add(p)
 
 	go func() {
-		_ = clientManage.CliUdpApiGateway.Run()
+		_ = APIGateway.CliUdpApiGateway.Run()
 	}()
 
 	_ = p.Start()

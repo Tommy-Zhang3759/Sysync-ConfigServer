@@ -59,6 +59,9 @@ func (m *CallerTemp) MoreDestByIP(IPs ...net.UDPAddr) {
 }
 
 func (m *CallerTemp) MoreDestBySysyncID(IDs ...string) error {
+	if len(IDs) == 0 || IDs[0] == "" {
+		return nil
+	}
 	for _, id := range IDs {
 		_, e := clientManage.Get(id)
 		if e != nil {

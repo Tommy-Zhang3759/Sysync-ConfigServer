@@ -3,6 +3,7 @@ package APIGateway
 import (
 	"ConfigServer/utils"
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -31,9 +32,25 @@ func (u *UDPAPIPortTemp) GetKeyWord() string {
 }
 
 func (u *UDPAPIPortTemp) Start() error {
-	go func() {
-		_ = u.run()
-	}()
+	log.Panic("trying to call an empty API port")
+	//Here is a template to build a port:
+	//stop := false
+	//
+	//for stop == false {
+	//	reqPack := u.MessageQue.Pop().(UDPMessage)
+	//
+	//	select {
+	//	case <-u.EndRun:
+	//		fmt.Println("Received stop signal, goroutine exiting...")
+	//		stop = true
+	//	default:
+	//		err := u.Gateway.SendMess([]byte(reqPack.Text["f_name"].(string)), reqPack.Addr)
+	//		if err != nil {
+	//			return err
+	//		}
+	//		return nil
+	//	}
+	//}
 	return nil
 }
 
@@ -50,27 +67,6 @@ func (u *UDPAPIPortTemp) NewMess(mess UDPMessage) {
 func (u *UDPAPIPortTemp) Init(gateway *UDPAPIGateway) {
 	u.Gateway = gateway
 	u.MessageQue = utils.NewQueue()
-}
-
-func (u *UDPAPIPortTemp) run() error { // a template to write APIs' definition
-	stop := false
-
-	for stop == false {
-		reqPack := u.MessageQue.Pop().(UDPMessage)
-
-		select {
-		case <-u.EndRun:
-			fmt.Println("Received stop signal, goroutine exiting...")
-			stop = true
-		default:
-			err := u.Gateway.SendMess([]byte(reqPack.Text["f_name"].(string)), reqPack.Addr)
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-	}
-	return nil
 }
 
 type UDPAPIGateway struct { // listen api calls on a specific port
@@ -145,7 +141,7 @@ func (a *UDPAPIGateway) SendMess(mess []byte, destIPs ...net.UDPAddr) error {
 			fmt.Println("Error sending UDP message:", err)
 			return err
 		}
-		fmt.Println("Message sent to", destIP.String(), ": ", string(mess))
+		log.Println("Message sent to", destIP.String(), ": ", string(mess))
 		_ = conn.Close()
 	}
 	return nil
@@ -215,7 +211,6 @@ func (a *UDPAPIGateway) Stop() error {
 }
 
 type UDPAPIPort interface {
-	run() error
 	Start() error
 	Stop() error
 	NewMess(mess UDPMessage)
