@@ -89,14 +89,20 @@ function updateHostName(destSysyncId, destIpAddr, destPort, server_ip_addr, serv
         .catch(error => console.error('Error while sending:', error));
 }
 
-function runCommand(destSysyncId, destIpAddr, destPort) {
+function runCommand(destSysyncId, destIpAddr, destPort, cmd) {
     if (!Array.isArray(destSysyncId) || !destSysyncId.length) {
         destSysyncId = [destSysyncId];
     }
     if (!Array.isArray(destIpAddr) || !destIpAddr.length) {
         destIpAddr = [destIpAddr];
     }
-    const command = document.getElementById("commandInput").value;
+    let command
+    if (cmd == null){
+        command = document.getElementById("commandInput").value;
+    } else {
+        command = cmd
+    }
+
 
     if (command === "" || command == null){
         return;
@@ -111,7 +117,7 @@ function runCommand(destSysyncId, destIpAddr, destPort) {
             f_name: "run_command",
             dest_ip: destIpAddr,
             dest_port: destPort,
-            command: document.getElementById("commandInput").value
+            command: cmd
         })
     })
         .then(response => response.json())
