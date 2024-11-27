@@ -141,7 +141,7 @@ func (a *UDPAPIGateway) SendMess(mess []byte, destIPs ...net.UDPAddr) error {
 			fmt.Println("Error sending UDP message:", err)
 			return err
 		}
-		fmt.Println("Message sent to", destIP.String(), ": ", string(mess))
+		log.Println("Message sent to", destIP.String(), ": ", string(mess))
 		_ = conn.Close()
 	}
 	return nil

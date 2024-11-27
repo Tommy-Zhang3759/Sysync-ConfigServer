@@ -3,8 +3,8 @@ package WebAPI
 import (
 	"ConfigServer/clientManage"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -25,7 +25,7 @@ func Handler(w http.ResponseWriter, r *http.Request, q url.Values) {
 			_ = Body.Close()
 		}(r.Body)
 
-		_, err = fmt.Printf("POST request body: %s\n", body)
+		log.Printf("POST request body: %s\n", body)
 
 		if len(pathSegments) > 0 {
 			switch pathSegments[0] {
