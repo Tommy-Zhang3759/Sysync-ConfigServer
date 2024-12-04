@@ -9,9 +9,38 @@ import (
 
 var CliUdpApiGateway *UDPAPIGateway = nil // definition of tcp port
 
+func NewUDPMessage(mess []byte, addr net.UDPAddr) (UDPMessage, error) {
+	messJson, jsonErr := utils.JsonDecode(mess)
+	if jsonErr != nil {
+		return UDPMessage{}, jsonErr
+	}
+	var fName string
+	var fNameExist bool
+	if fName, fNameExist = messJson["f_name"].(string); fNameExist == false {
+		return UDPMessage{}, fmt.Errorf("function name not found")
+	}
+
+	return UDPMessage{
+		ori:   string(mess),
+		Addr:  addr,
+		Text:  messJson,
+		fName: fName,
+	}, nil
+}
+
 type UDPMessage struct {
-	Addr net.UDPAddr
-	Text map[string]interface{}
+	Addr  net.UDPAddr
+	Text  map[string]interface{}
+	ori   string
+	fName string
+}
+
+func (u *UDPMessage) Original() string {
+	return string(u.ori)
+}
+
+func (u *UDPMessage) FName() string {
+	return u.fName
 }
 
 type UDPAPIPortTemp struct {
@@ -181,19 +210,12 @@ func (a *UDPAPIGateway) Run() error {
 			}
 
 			go func(buffer []byte, addr net.UDPAddr) {
-				messJson, jsonErr := utils.JsonDecode(buffer)
-				if jsonErr != nil {
-					fmt.Println("Error decoding form UDP API message:", jsonErr.Error())
+				if mess, messErr := NewUDPMessage(buffer, addr); messErr == nil {
+					a.portList[mess.FName()].NewMess(mess)
+				} else {
+					log.Println("Error parsing message:", messErr.Error())
 				}
 
-				if b := messJson["f_name"] == nil; b {
-					_ = a.SendMess([]byte("{\"error\":\"invalid key\"}"))
-				}
-
-				a.portList[messJson["f_name"].(string)].NewMess(UDPMessage{
-					Addr: addr,
-					Text: messJson,
-				})
 			}(buffer[:n], *addr.(*net.UDPAddr))
 		}
 
