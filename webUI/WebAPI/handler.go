@@ -41,6 +41,8 @@ func Handler(w http.ResponseWriter, r *http.Request, q url.Values) {
 				function(w, r, &body)
 			case "cliInfo":
 				cliInfo(w, r)
+			case "clientTerminal":
+				clientTerminal(w, r, q)
 			default:
 
 				http.Error(w, "API not found", http.StatusNotFound)
@@ -86,11 +88,11 @@ func cliInfo(w http.ResponseWriter, r *http.Request) {
 		rsp, _ = json.Marshal(clients)
 	} else {
 		clients, _ := clientManage.AllHostName()
-		var freiendlyClients []clientManage.FriendlyClient
+		var friendlyClients []clientManage.FriendlyClient
 		for _, client := range clients {
-			freiendlyClients = append(freiendlyClients, client.HumanFriendly())
+			friendlyClients = append(friendlyClients, client.HumanFriendly())
 		}
-		rsp, _ = json.Marshal(freiendlyClients)
+		rsp, _ = json.Marshal(friendlyClients)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -100,6 +102,14 @@ func cliInfo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to write response", http.StatusInternalServerError)
 		return
 	}
+}
+
+func clientTerminal(w http.ResponseWriter, r *http.Request, q url.Values) {
+	conn, err := upgradeToWebSocket(w, r)
+	if err != nil {
+		http.Error(w, "Failed to upgrade to WebSocket", http.StatusInternalServerError)
+	}
+
 }
 
 func command(w http.ResponseWriter, r *http.Request, body *[]byte) {

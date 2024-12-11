@@ -22,13 +22,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 设置静态文件的根目录
+	// set root folder of static files
 	staticDir := "./webUI/static/"
-
-	// 构造文件的完整路径
 	path := filepath.Join(staticDir, reqPath)
-
-	// 返回本地文件
+	// return local file
 	http.ServeFile(w, r, path)
 }
 
